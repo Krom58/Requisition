@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Requisition.Pages.HiddenCostSettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Requisition.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="24" RowSpacing="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8">
+            <TextBlock Text="ตั้งค่าต้นทุนแฝง"
+                       Style="{StaticResource TitleTextBlockStyle}"/>
+            <TextBlock Text="กำหนดค่าเปอร์เซ็นต์ต้นทุนแฝงสำหรับการคำนวณ"
+                       Style="{StaticResource BodyTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
+        <!-- Input Section -->
+        <StackPanel Grid.Row="1" 
+                    Spacing="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    Padding="24"
+                    CornerRadius="8"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+            
+            <StackPanel Spacing="8">
+                <TextBlock Text="เปอร์เซ็นต์ต้นทุนแฝง (%)"
+                           FontWeight="SemiBold"/>
+                
+                <NumberBox x:Name="PercentageInput"
+                           PlaceholderText="กรอกค่าเปอร์เซ็นต์ (0-100)"
+                           Minimum="0"
+                           Maximum="100"
+                           SpinButtonPlacementMode="Compact"
+                           Width="300"
+                           HorizontalAlignment="Left"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button x:Name="SaveButton"
+                        Content="บันทึก"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Click="SaveButton_Click"/>
+            </StackPanel>
+
+            <InfoBar x:Name="MessageBar"
+                     IsOpen="False"
+                     IsClosable="True"/>
+        </StackPanel>
+
+        <!-- History Section -->
+        <StackPanel Grid.Row="2" 
+                    Spacing="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    Padding="24"
+                    CornerRadius="8"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1">
+            
+            <TextBlock Text="ประวัติการเปลี่ยนแปลง"
+                       Style="{StaticResource SubtitleTextBlockStyle}"
+                       FontWeight="SemiBold"/>
+
+            <ListView x:Name="HistoryListView"
+                      ItemsSource="{x:Bind HistoryItems, Mode=OneWay}"
+                      SelectionMode="None"
+                      MaxHeight="400">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="local:HiddenCostHistoryItem">
+                        <Grid Padding="12" ColumnSpacing="16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <FontIcon Grid.Column="0" 
+                                      Glyph="&#xE81C;"
+                                      FontSize="20"
+                                      Foreground="{ThemeResource AccentFillColorDefaultBrush}"/>
+
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock>
+                                    <Run Text="เปลี่ยนจาก"/>
+                                    <Run Text="{x:Bind OldPercentageDisplay}" FontWeight="Bold"/>
+                                    <Run Text="เป็น"/>
+                                    <Run Text="{x:Bind NewPercentageDisplay}" FontWeight="Bold" Foreground="{ThemeResource SystemAccentColor}"/>
+                                </TextBlock>
+                                <TextBlock Text="{x:Bind ActionBy}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           FontSize="12"/>
+                            </StackPanel>
+
+                            <TextBlock Grid.Column="2"
+                                       Text="{x:Bind ActionDateDisplay}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       FontSize="12"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </StackPanel>
+    </Grid>
+</Page>

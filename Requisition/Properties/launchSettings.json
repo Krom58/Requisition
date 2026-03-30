@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Requisition (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Requisition (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

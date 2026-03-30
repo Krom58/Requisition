@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Requisition.Pages.KitchenPeopleReportPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Requisition.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:local1="using:Requisition.Models.Reports"
+    mc:Ignorable="d">
+
+    <Grid Padding="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,12">
+            <TextBlock Text="📈 รายงานจำนวนคนตามห้องครัว"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="สรุปจำนวนลูกค้าที่คาดว่าจะมาและจำนวนลูกค้าที่มาใช้บริการจริง แยกตามห้องครัว"
+                       FontSize="14"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
+        <!-- Date Filter -->
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+            <CalendarDatePicker x:Name="StartDatePicker"
+                                Header="วันที่เริ่มต้น"
+                                Width="150"
+                                DateChanged="DateFilter_Changed"/>
+            <CalendarDatePicker x:Name="EndDatePicker"
+                                Header="วันที่สิ้นสุด"
+                                Width="150"
+                                DateChanged="DateFilter_Changed"/>
+        </StackPanel>
+
+        <!-- Actions + Date Range Display -->
+        <Grid Grid.Row="2" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12">
+                <Button x:Name="RefreshButton" Content="🔄 รีเฟรช" Click="RefreshButton_Click" Padding="12,8"/>
+                <Button x:Name="ExportButton" Content="📤 ส่งออก CSV" Click="ExportButton_Click" Padding="12,8" Style="{StaticResource AccentButtonStyle}"/>
+                <Button x:Name="PrintButton" Content="🖨️ พิมพ์" Click="PrintButton_Click" Padding="12,8"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBlock x:Name="DateRangeText" 
+                           FontSize="14" 
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           HorizontalAlignment="Right"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Content -->
+        <Grid Grid.Row="3">
+            <ProgressRing x:Name="LoadingRing" IsActive="False" Width="60" Height="60" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+            <!-- Scrollable area: global header + groups -->
+            <ScrollViewer VerticalScrollMode="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollMode="Disabled"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Margin="0,0,0,0"
+                          VerticalAlignment="Stretch"
+                          HorizontalAlignment="Stretch"
+                          Padding="0"
+                          IsTabStop="False">
+                <StackPanel>
+
+                    <!-- Global header for table columns -->
+                    <Grid Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.6*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="วันที่ / ห้องครัว" Grid.Column="0" FontWeight="SemiBold"/>
+                        <TextBlock Text="จำนวนใบ" Grid.Column="1" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                        <TextBlock Text="จำนวนคาดหวัง" Grid.Column="2" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                        <TextBlock Text="จำนวนจริง" Grid.Column="3" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                        <TextBlock Text="ส่วนต่าง" Grid.Column="4" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                        <TextBlock Text="% (จริง/คาดหวัง)" Grid.Column="5" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <!-- Groups: each group = one date; inner ListView shows kitchens for that date -->
+                    <ItemsControl x:Name="ReportGroupsControl">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,6">
+                                    <!-- Date header (เลื่อนลงมานิดหน่อยเพื่อไม่ให้ซ้อนกับ global header) -->
+                                    <TextBlock Text="{Binding DateDisplay}" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Margin="6,18,6,8"/>
+                                    <!-- Inner list for kitchens on that date -->
+                                    <ListView ItemsSource="{Binding Items}" ItemContainerStyle="{StaticResource ListViewItemStyle}">
+                                        <ListView.ItemTemplate>
+                                            <DataTemplate x:DataType="local1:KitchenPeopleReportItem">
+                                                <Border Margin="0,6" Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" CornerRadius="8" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="2">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="1.6*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <TextBlock Grid.Column="0" Text="{x:Bind KitchenDisplay}" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="1" Text="{x:Bind TransfersCount}" HorizontalAlignment="Right" FontSize="15" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="2" Text="{x:Bind TotalExpectedPeopleDisplay}" HorizontalAlignment="Right" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="3" Text="{x:Bind TotalActualPeopleDisplay}" HorizontalAlignment="Right" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="4" Text="{x:Bind DifferenceDisplay}" HorizontalAlignment="Right" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                                        <TextBlock Grid.Column="5" Text="{x:Bind PercentDisplay}" HorizontalAlignment="Right" FontSize="15" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ListView.ItemTemplate>
+                                    </ListView>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <StackPanel x:Name="EmptyStatePanel" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+                <TextBlock Text="ไม่มีข้อมูลสำหรับรายงาน" FontSize="16" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Page>

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="Requisition.Controls.PrintableReportView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Width="794" 
+    Height="1123"
+    Background="White">
+
+    <!-- ⚠️ ลบ ScrollViewer ออก เพราะ print ไม่สามารถ scroll ได้ -->
+    <Grid x:Name="RootGrid" Padding="40">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,20">
+            <TextBlock x:Name="TitleText" 
+                       Text="รายงานจำนวนคนตามห้องครัว"
+                       FontSize="20" 
+                       FontWeight="Bold"
+                       HorizontalAlignment="Center"
+                       Foreground="Black"/>
+            <TextBlock x:Name="DateRangeText" 
+                       FontSize="12"
+                       Margin="0,6,0,0"
+                       HorizontalAlignment="Center"
+                       Foreground="Black"/>
+            <TextBlock x:Name="GeneratedDateText"
+                       FontSize="10"
+                       Margin="0,3,0,0"
+                       HorizontalAlignment="Center"
+                       Foreground="#666666"/>
+        </StackPanel>
+
+        <!-- Table Header -->
+        <Grid Grid.Row="1" 
+              BorderBrush="Black" 
+              BorderThickness="0,0,0,2"
+              Padding="0,0,0,6"
+              Margin="0,0,0,6">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100"/>
+                <!-- วันที่ -->
+                <ColumnDefinition Width="2*"/>
+                <!-- ห้องครัว -->
+                <ColumnDefinition Width="70"/>
+                <!-- จำนวนใบ -->
+                <ColumnDefinition Width="70"/>
+                <!-- คาดหวัง -->
+                <ColumnDefinition Width="70"/>
+                <!-- จริง -->
+                <ColumnDefinition Width="70"/>
+                <!-- ส่วนต่าง -->
+                <ColumnDefinition Width="90"/>
+                <!-- % -->
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="วันที่" FontWeight="Bold" FontSize="11" Foreground="Black"/>
+            <TextBlock Grid.Column="1" Text="ห้องครัว" FontWeight="Bold" FontSize="11" Foreground="Black"/>
+            <TextBlock Grid.Column="2" Text="จำนวนใบ" FontWeight="Bold" TextAlignment="Right" FontSize="11" Foreground="Black"/>
+            <TextBlock Grid.Column="3" Text="คาดหวัง" FontWeight="Bold" TextAlignment="Right" FontSize="11" Foreground="Black"/>
+            <TextBlock Grid.Column="4" Text="จริง" FontWeight="Bold" TextAlignment="Right" FontSize="11" Foreground="Black"/>
+            <TextBlock Grid.Column="5" Text="ส่วนต่าง" FontWeight="Bold" TextAlignment="Right" FontSize="11" Foreground="Black"/>
+            <TextBlock Grid.Column="6" Text="% (จริง/คาดหวัง)" FontWeight="Bold" TextAlignment="Right" FontSize="11" Foreground="Black"/>
+        </Grid>
+
+        <!-- Table Content -->
+        <ItemsControl x:Name="ReportItemsControl" Grid.Row="2">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Grid Margin="0,2">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="90"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="{Binding DateDisplay}" FontSize="10" Foreground="Black" TextWrapping="NoWrap"/>
+                        <TextBlock Grid.Column="1" Text="{Binding KitchenDisplay}" FontSize="10" Foreground="Black" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="2" Text="{Binding TransfersCount}" TextAlignment="Right" FontSize="10" Foreground="Black"/>
+                        <TextBlock Grid.Column="3" Text="{Binding TotalExpectedPeople}" TextAlignment="Right" FontSize="10" Foreground="Black"/>
+                        <TextBlock Grid.Column="4" Text="{Binding TotalActualPeople}" TextAlignment="Right" FontSize="10" Foreground="Black"/>
+                        <TextBlock Grid.Column="5" Text="{Binding Difference}" TextAlignment="Right" FontSize="10" Foreground="Black"/>
+                        <TextBlock Grid.Column="6" TextAlignment="Right" FontSize="10" Foreground="Black">
+                            <Run Text="{Binding PercentDisplay}"/>
+                        </TextBlock>
+                    </Grid>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>

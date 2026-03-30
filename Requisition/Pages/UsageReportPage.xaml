@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Requisition.Pages.UsageReportPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Requisition.Pages"
+    xmlns:models="using:Requisition.Models.Reports"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,16">
+            <TextBlock Text="📊 รายงานการใช้งาน"
+                       FontSize="28"
+                       FontWeight="Bold"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <TextBlock Text="รายงานการใช้วัตถุดิบและต้นทุน แยกตามช่วงเวลา"
+                       FontSize="14"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
+        <!-- Filters -->
+        <Grid Grid.Row="1" Margin="0,0,0,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Row 1: Report Type + Period Type + Date Pickers -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+                <ComboBox x:Name="ReportTypeCombo"
+                          Header="ประเภทรายงาน"
+                          Width="160"
+                          SelectionChanged="FilterChanged">
+                    <ComboBoxItem Content="วัตถุดิบ" Tag="Material" IsSelected="True"/>
+                    <ComboBoxItem Content="ต้นทุน" Tag="Cost"/>
+                </ComboBox>
+
+                <ComboBox x:Name="PeriodTypeCombo"
+                          Header="ช่วงเวลา"
+                          Width="120"
+                          SelectionChanged="FilterChanged">
+                    <ComboBoxItem Content="รายวัน" Tag="Daily" IsSelected="True"/>
+                    <ComboBoxItem Content="รายเดือน" Tag="Monthly"/>
+                    <ComboBoxItem Content="รายปี" Tag="Yearly"/>
+                </ComboBox>
+
+                <CalendarDatePicker x:Name="StartDatePicker"
+                                    Header="วันที่เริ่มต้น"
+                                    Width="150"
+                                    DateChanged="FilterChanged"/>
+
+                <CalendarDatePicker x:Name="EndDatePicker"
+                                    Header="วันที่สิ้นสุด"
+                                    Width="150"
+                                    DateChanged="FilterChanged"/>
+            </StackPanel>
+
+            <!-- Row 2: Search fields -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+                <TextBox x:Name="SearchNameBox"
+                         Header="ค้นหาชื่อสินค้า"
+                         Width="180"
+                         PlaceholderText="ค้นหา..."
+                         TextChanged="FilterChanged"/>
+
+                <TextBox x:Name="SearchUnitBox"
+                         Header="ค้นหาหน่วย"
+                         Width="120"
+                         PlaceholderText="ค้นหา..."
+                         TextChanged="FilterChanged"/>
+
+                <ComboBox x:Name="CategoryCombo"
+                          Header="ประเภท"
+                          Width="150"
+                          SelectionChanged="FilterChanged"/>
+
+                <ComboBox x:Name="KitchenCombo"
+                          Header="ห้องครัว"
+                          Width="180"
+                          SelectionChanged="FilterChanged">
+                    <ComboBoxItem Content="(ทั้งหมด)" Tag="" IsSelected="True"/>
+                </ComboBox>
+            </StackPanel>
+
+            <!-- Row 3: Buttons -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12">
+                <Button x:Name="RefreshButton"
+                        Content="🔄 รีเฟรช"
+                        Click="RefreshButton_Click"
+                        Padding="12,8"/>
+                <Button x:Name="ExportButton"
+                        Content="📤 ส่งออก CSV"
+                        Click="ExportButton_Click"
+                        Style="{StaticResource AccentButtonStyle}"
+                        Padding="12,8"/>
+                <Button x:Name="PrintButton"
+                        Content="🖨️ พิมพ์"
+                        Click="PrintButton_Click"
+                        Padding="12,8"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Content -->
+        <Grid Grid.Row="2">
+            <ProgressRing x:Name="LoadingRing"
+                          IsActive="False"
+                          Width="60"
+                          Height="60"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"/>
+
+            <!-- Material Report ListView - ✅ เพิ่ม 2 คอลัมน์ใหม่ -->
+            <ListView x:Name="MaterialReportListView"
+                      Visibility="Collapsed"
+                      SelectionMode="None">
+                <ListView.Header>
+                    <Grid Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/><!-- วัตถุดิบ -->
+                            <ColumnDefinition Width="1.2*"/><!-- ประเภท -->
+                            <ColumnDefinition Width="1.2*"/><!-- ห้องครัว -->
+                            <ColumnDefinition Width="1*"/><!-- ช่วงเวลา -->
+                            <ColumnDefinition Width="0.8*"/><!-- จำนวนใช้ -->
+                            <ColumnDefinition Width="0.6*"/><!-- หน่วย -->
+                            <ColumnDefinition Width="0.9*"/><!-- ✅ ต้นทุน/หน่วย -->
+                            <ColumnDefinition Width="1*"/><!-- ✅ ต้นทุนรวม -->
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="วัตถุดิบ" Grid.Column="0" FontWeight="SemiBold" FontSize="14"/>
+                        <TextBlock Text="ประเภท" Grid.Column="1" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Left"/>
+                        <TextBlock Text="ห้องครัว" Grid.Column="2" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Left"/>
+                        <TextBlock Text="ช่วงเวลา" Grid.Column="3" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Right"/>
+                        <TextBlock Text="จำนวนใช้" Grid.Column="4" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Right"/>
+                        <TextBlock Text="หน่วย" Grid.Column="5" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Right"/>
+                        <TextBlock Text="ต้นทุน/หน่วย" Grid.Column="6" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Right"/>
+                        <TextBlock Text="ต้นทุนรวม" Grid.Column="7" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Right"/>
+                    </Grid>
+                </ListView.Header>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="models:MaterialUsageReportItem">
+                        <Border Margin="0,6" Padding="12"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*"/>
+                                    <ColumnDefinition Width="1.2*"/>
+                                    <ColumnDefinition Width="1.2*"/>
+                                    <ColumnDefinition Width="1*"/>
+                                    <ColumnDefinition Width="0.8*"/>
+                                    <ColumnDefinition Width="0.6*"/>
+                                    <ColumnDefinition Width="0.9*"/><!-- ✅ ต้นทุน/หน่วย -->
+                                    <ColumnDefinition Width="1*"/><!-- ✅ ต้นทุนรวม -->
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind ProductName}" FontSize="15" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{x:Bind Category}" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{x:Bind KitchenDisplay}" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="3" Text="{x:Bind PeriodDisplay}" FontSize="15" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="4" Text="{x:Bind TotalQuantityDisplay}" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="5" Text="{x:Bind Unit}" FontSize="15" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="6" Text="{x:Bind UnitCostDisplay}" FontSize="15" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="7" Text="{x:Bind TotalCostDisplay}" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Right" Foreground="{ThemeResource SuccessBrush}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- Cost Report ListView - ✅ ปรับคอลัมน์ใหม่ -->
+            <ListView x:Name="CostReportListView"
+                      Visibility="Collapsed"
+                      SelectionMode="None">
+                <ListView.Header>
+                    <Grid Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="1.2*"/><!-- ช่วงเวลา -->
+                            <ColumnDefinition Width="1.2*"/><!-- ห้องครัว -->
+                            <ColumnDefinition Width="0.8*"/><!-- คน/ครั้ง -->
+                            <ColumnDefinition Width="0.6*"/><!-- จ.ครั้ง -->
+                            <ColumnDefinition Width="*"/><!-- ยอดต้นทุน -->
+                            <ColumnDefinition Width="*"/><!-- ต้นทุน/หัว -->
+                            <ColumnDefinition Width="0.7*"/><!-- ต้นทุนแฝง % -->
+                            <ColumnDefinition Width="*"/><!-- ยอดต้นทุนแฝง -->
+                            <ColumnDefinition Width="*"/><!-- ต้นทุนแฝง/หัว -->
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="ช่วงเวลา" Grid.Column="0" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="ห้องครัว" Grid.Column="1" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Text="คน/ครั้ง" Grid.Column="2" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                        <TextBlock Text="จ.ครั้ง" Grid.Column="3" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                        <TextBlock Text="ยอดต้นทุน" Grid.Column="4" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                        <TextBlock Text="ต้นทุน/หัว" Grid.Column="5" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                        <TextBlock Text="แฝง %" Grid.Column="6" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                        <TextBlock Text="ยอดแฝง" Grid.Column="7" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                        <TextBlock Text="แฝง/หัว" Grid.Column="8" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Right"/>
+                    </Grid>
+                </ListView.Header>
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="models:CostUsageReportItem">
+                        <Border Margin="0,6" Padding="12"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                CornerRadius="8"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="1.2*"/>
+                                    <ColumnDefinition Width="1.2*"/>
+                                    <ColumnDefinition Width="0.8*"/>
+                                    <ColumnDefinition Width="0.6*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="0.7*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{x:Bind PeriodDisplay}" Grid.Column="0" FontSize="14" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Text="{x:Bind KitchenDisplay}" Grid.Column="1" FontSize="13" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{x:Bind PeoplePerMealDisplay}" Grid.Column="2" FontSize="14" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{x:Bind MealCountDisplay}" Grid.Column="3" FontSize="13" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                <TextBlock Text="{x:Bind TotalCostDisplay}" Grid.Column="4" FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Right" Foreground="{ThemeResource SuccessBrush}"/>
+                                <TextBlock Text="{x:Bind CostPerHeadDisplay}" Grid.Column="5" FontSize="14" HorizontalAlignment="Right" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Text="{x:Bind HiddenCostPercentageDisplay}" Grid.Column="6" FontSize="13" HorizontalAlignment="Right" Foreground="#FFEA580C"/><!-- สีส้ม -->
+                                <TextBlock Text="{x:Bind HiddenCostAmountDisplay}" Grid.Column="7" FontSize="13" HorizontalAlignment="Right" Foreground="#FF9333EA"/><!-- สีม่วง -->
+                                <TextBlock Text="{x:Bind HiddenCostPerHeadDisplay}" Grid.Column="8" FontSize="13" HorizontalAlignment="Right" Foreground="#FFA855F7"/><!-- สีม่วงอ่อน -->
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- Empty State -->
+            <StackPanel x:Name="EmptyStatePanel"
+                        Visibility="Collapsed"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Spacing="12">
+                <TextBlock Text="ไม่มีข้อมูลสำหรับรายงาน"
+                           FontSize="16"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Pagination -->
+        <StackPanel x:Name="PaginationPanel"
+                    Grid.Row="3"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center"
+                    Spacing="12"
+                    Margin="0,12,0,0"
+                    Visibility="Collapsed">
+            <Button x:Name="PrevPageButton"
+                    Content="◀️ Prev"
+                    Click="PrevPageButton_Click"
+                    Padding="12,6"/>
+            <TextBlock x:Name="PageInfoTextBlock"
+                       VerticalAlignment="Center"
+                       FontSize="15"
+                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Button x:Name="NextPageButton"
+                    Content="Next ▶️"
+                    Click="NextPageButton_Click"
+                    Padding="12,6"/>
+        </StackPanel>
+    </Grid>
+</Page>

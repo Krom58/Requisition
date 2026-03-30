@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Requisition.Pages.AddMoreItemsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:Requisition.Models"
+    xmlns:local="using:Requisition.Pages"
+    mc:Ignorable="d">
+
+    <ScrollViewer HorizontalAlignment="Stretch">
+        <!-- ⚠️ ลบ MaxWidth และเพิ่ม Padding -->
+        <Grid Padding="24,24,24,40" HorizontalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>   <!-- Header -->
+                <RowDefinition Height="Auto"/>   <!-- Info Cards -->
+                <RowDefinition Height="Auto"/>   <!-- Left: Available Products -->
+                <RowDefinition Height="*"/>      <!-- Right: Existing Items (expandable) -->
+                <RowDefinition Height="Auto"/>   <!-- Action Buttons -->
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,24">
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,16">
+                    <Button Click="BackButton_Click" Style="{StaticResource SubtleButtonStyle}">
+                        <FontIcon Glyph="&#xE72B;" FontSize="20" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                    </Button>
+                    <StackPanel>
+                        <TextBlock Text="เบิกเพิ่ม / เพิ่มรายการ" FontSize="32" FontWeight="Bold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <TextBlock x:Name="TransferNoText" 
+                                   FontFamily="Consolas" 
+                                   FontSize="16" 
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Info Card -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/> <!-- NEW: Hidden cost + total-with-hidden row -->
+                    </Grid.RowDefinitions>
+
+                    <!-- จำนวนรายการ (row 0, col 0) -->
+                    <Border Grid.Column="0" Grid.Row="0"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="20"
+                            Margin="0,0,12,12"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="2">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="จำนวนรายการ" 
+                                       FontSize="16" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="ItemCountText" 
+                                       FontSize="30" 
+                                       FontWeight="Bold"
+                                       Foreground="{ThemeResource PrimaryColorBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- เบิกไปแล้ว (row 0, col 1) -->
+                    <Border Grid.Column="1" Grid.Row="0"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="20"
+                            Margin="0,0,0,12"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="2">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="เบิกไปแล้ว" 
+                                       FontSize="16" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="TotalQuantityText" 
+                                       FontSize="30" 
+                                       FontWeight="Bold" 
+                                       Foreground="{ThemeResource SuccessBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- จำนวนคนที่คาดว่าจะเข้า (row 1, col 0) -->
+                    <Border x:Name="ExpectedPeopleInfoBorder"
+                            Grid.Column="0" Grid.Row="1"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="8"
+                            Padding="20"
+                            Margin="0,0,12,0"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="2">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="👥 จำนวนคนที่คาดว่าจะเข้า" 
+                                       FontSize="16" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="ExpectedPeopleText"
+                                       FontSize="30"
+                                       FontWeight="Bold"
+                                       Foreground="{ThemeResource SecondaryColorBrush}"/>
+                            <TextBlock Text="คน" 
+                                       FontSize="16" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ต้นทุนต่อคน (row 1, col 1) -->
+                    <Border x:Name="BudgetCard"
+                            Grid.Column="1" Grid.Row="1"
+                            CornerRadius="8"
+                            Padding="20"
+                            BorderThickness="2"
+                            Margin="0,0,0,0"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="💰 ต้นทุนต่อคน" 
+                                       FontSize="16"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                            <!-- Row: cost per person and Outlet price-per-head -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                                <TextBlock x:Name="BudgetUsageText"
+                                           FontSize="30"
+                                           FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           Foreground="{ThemeResource AccentColorBrush}"/>
+
+                                <TextBlock x:Name="BudgetTargetText"
+                                           FontSize="30"
+                                           FontWeight="Bold"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           VerticalAlignment="Bottom"
+                                           Visibility="Collapsed"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- NEW: Hidden Cost Percentage Card (row 2, col 0) -->
+                    <Border x:Name="HiddenCostPercentageCard"
+                            Grid.Column="0" Grid.Row="2"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="2"
+                            CornerRadius="8"
+                            Padding="20"
+                            Margin="0,12,12,12">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="📊 ต้นทุนแฝง" 
+                                       FontSize="14" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <TextBlock x:Name="HiddenCostPercentageText"
+                                       FontSize="30"
+                                       FontWeight="Bold"
+                                       Foreground="#F59E0B"
+                                       TextAlignment="Center"/>
+                            <TextBlock x:Name="HiddenCostAmountText" 
+                                       FontSize="13" 
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       TextAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- NEW: Total Cost with Hidden Cost Card (row 2, col 1) -->
+                    <Border x:Name="TotalCostWithHiddenCard"
+                            Grid.Column="1" Grid.Row="2"
+                            CornerRadius="8"
+                            Padding="24"
+                            BorderThickness="2"
+                            Margin="0,12,0,12"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="💎 ต้นทุนรวมต่อคน (รวมต้นทุนแฝง)" 
+                                       FontSize="14"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                            <!-- แสดงต้นทุนรวมและเป้าหมาย -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
+                                <TextBlock x:Name="TotalCostWithHiddenText"
+                                           FontSize="28"
+                                           FontWeight="Bold"
+                                           TextAlignment="Center"
+                                           Foreground="#8B5CF6"/>
+
+                                <TextBlock x:Name="TotalCostTargetText"
+                                           FontSize="28"
+                                           FontWeight="Bold"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           VerticalAlignment="Bottom"
+                                           Visibility="Collapsed"/>
+                            </StackPanel>
+
+                            <!-- รายละเอียดการคำนวณ -->
+                            <TextBlock x:Name="TotalCostBreakdownText"
+                                       FontSize="13"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Visibility="Collapsed"
+                                       Margin="0,6,0,0"/>
+
+                            <!-- Warning/Success สำหรับเทียบกับเป้าหมาย -->
+                            <TextBlock x:Name="TotalCostWarningText"
+                                       FontSize="14"
+                                       FontWeight="SemiBold"
+                                       TextAlignment="Center"
+                                       Visibility="Collapsed"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- New Items Count Badge -->
+                <Border x:Name="NewItemsCountBorder"
+                        Background="{ThemeResource SuccessBrush}"
+                        CornerRadius="8"
+                        Padding="16,10"
+                        Margin="0,16,0,0"
+                        Visibility="Collapsed"
+                        Opacity="0.95">
+                    <TextBlock x:Name="NewItemsCountText" 
+                               Foreground="White" 
+                               FontWeight="SemiBold"
+                               FontSize="14"
+                               TextAlignment="Center"/>
+                </Border>
+            </StackPanel>
+
+            <!-- Left: Available Products (เพิ่มรายการใหม่) placed in Row 2 and set to stretch full width -->
+            <StackPanel Grid.Row="2" Spacing="12" HorizontalAlignment="Stretch" Margin="0,0,0,24">
+                <TextBlock Text="➕ เพิ่มรายการใหม่" 
+                           FontSize="22" 
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+
+                <AutoSuggestBox x:Name="ProductSearchBox"
+                                PlaceholderText="🔍 ค้นหารหัส หรือชื่อสินค้า..."
+                                QueryIcon="Find"
+                                TextChanged="ProductSearchBox_TextChanged"/>
+
+                <Border CornerRadius="4"
+                        Padding="12,8">
+                    <TextBlock x:Name="AvailableProductsCountText" 
+                               FontSize="15" 
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                </Border>
+
+                <!-- Product list -->
+                <ListView x:Name="AvailableProductsListView"
+                          SelectionMode="None"
+                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                          BorderThickness="1"
+                          CornerRadius="8"
+                          MaxHeight="620"
+                          ItemContainerStyle="{StaticResource ListViewItemStyle}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="models:Product">
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="12,10"
+                                    Background="Transparent">
+                                <Grid ColumnSpacing="12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{x:Bind Name}" 
+                                                   FontWeight="SemiBold"
+                                                   FontSize="16"
+                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock FontSize="14" 
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                   Margin="0,4,0,0">
+                                            <Run Text="รหัส:"/>
+                                            <Run Text="{x:Bind Code}" FontFamily="Consolas"/>
+                                            <Run Text=" • หน่วย:"/>
+                                            <Run Text="{x:Bind Unit}"/>
+                                            <Run Text=" • ต้นทุน:"/>
+                                            <Run Text="{x:Bind Price}"/>
+                                        </TextBlock>
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            Content="เพิ่ม"
+                                            Style="{StaticResource AccentButtonStyle}"
+                                            Tag="{x:Bind}"
+                                            Click="AddProductButton_Click"
+                                            VerticalAlignment="Center"
+                                            MinWidth="84"
+                                            FontSize="14"
+                                            Padding="10,6"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </StackPanel>
+
+            <!-- Right: Existing Items (เบิกเพิ่ม) placed in Row 3 -->
+            <StackPanel Grid.Row="3" Spacing="12">
+                <TextBlock Text="📦 รายการที่มีอยู่แล้ว (เบิกเพิ่ม)" 
+                           FontSize="22" 
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" 
+                              VerticalScrollBarVisibility="Disabled">
+                    <ListView x:Name="ItemsListView"
+                              SelectionMode="None"
+                              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                              BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                              BorderThickness="1"
+                              CornerRadius="8"
+                              MaxHeight="680"
+                              MaxWidth="1503"
+                              HorizontalContentAlignment="Stretch"
+                              ItemContainerStyle="{StaticResource ListViewItemStyle}">
+
+                        <ListView.Header>
+                            <Grid Padding="16,12" 
+                                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                  BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                  BorderThickness="0,0,0,1">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="100"/>   <!-- รหัส -->
+                                    <ColumnDefinition Width="*"/>     <!-- ชื่อสินค้า -->
+                                    <ColumnDefinition Width="100"/>   <!-- เบิกสุทธิ (หลังหักคืน) -->
+                                    <ColumnDefinition Width="80"/>    <!-- หน่วย -->
+                                    <ColumnDefinition Width="110"/>   <!-- ต้นทุน/หน่วย -->
+                                    <ColumnDefinition Width="120"/>   <!-- ต้นทุนรวม -->
+                                    <ColumnDefinition Width="220"/>   <!-- เบิกเพิ่มครั้งนี้ (กว้างขึ้น) -->
+                                    <ColumnDefinition Width="50"/>    <!-- ปุ่มลบ -->
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="รหัส" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="1" Text="ชื่อสินค้า" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="12,0" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="2" Text="ใช้อยู่ (หลังหักคืน)" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="3" Text="หน่วย" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="4" Text="ต้นทุน/หน่วย" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="5" Text="ต้นทุนรวม" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="6" Text="เบิกเพิ่มครั้งนี้" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="7" Text="" />
+                            </Grid>
+                        </ListView.Header>
+
+                        <!-- ItemTemplate -->
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="local:TransferItemDisplay">
+                                <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="12,10"
+                                        Background="Transparent">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>   
+                                            <ColumnDefinition Width="*"/>     
+                                            <ColumnDefinition Width="100"/>   
+                                            <ColumnDefinition Width="80"/>    
+                                            <ColumnDefinition Width="110"/>   
+                                            <ColumnDefinition Width="120"/>   
+                                            <ColumnDefinition Width="220"/>   <!-- increased -->
+                                            <ColumnDefinition Width="50"/>    
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- รหัส -->
+                                        <TextBlock Grid.Column="0" 
+                                                   Text="{x:Bind Item.ProductCode}" 
+                                                   FontFamily="Consolas" 
+                                                   FontSize="13"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+
+                                        <!-- ชื่อสินค้า + แสดงวันที่ของราคาที่ถูกบันทึกไว้ -->
+                                        <StackPanel Grid.Column="1" Orientation="Vertical" Margin="12,0">
+                                            <TextBlock Text="{x:Bind Item.ProductName}" 
+                                                       TextTrimming="CharacterEllipsis" 
+                                                       FontSize="14"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                            <TextBlock FontSize="12"
+                                                       HorizontalAlignment="Center"
+                                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                       Margin="0,4,0,0">
+                                                <TextBlock.Inlines>
+                                                    <Run Text="{x:Bind Item.PriceDateDisplay}"/>
+                                                </TextBlock.Inlines>
+                                            </TextBlock>
+                                        </StackPanel>
+
+                                        <!-- ใช้อยู่ (หลังหักคืนแล้ว) -->
+                                        <TextBlock Grid.Column="2" 
+                                                   Text="{x:Bind Item.RemainingQuantity}" 
+                                                   TextAlignment="Center" 
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{ThemeResource SuccessBrush}"
+                                                   FontWeight="SemiBold"/>
+
+                                        <!-- หน่วย -->
+                                        <TextBlock Grid.Column="3" 
+                                                   Text="{x:Bind Item.Unit}" 
+                                                   FontSize="13"
+                                                   TextAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                                        <!-- ต้นทุน/หน่วย -->
+                                        <TextBlock Grid.Column="4" 
+                                                   Text="{x:Bind Item.UnitCostDisplay}" 
+                                                   TextAlignment="Center" 
+                                                   FontSize="13"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{ThemeResource WarningBrush}"
+                                                   FontWeight="SemiBold"/>
+
+                                        <!-- ต้นทุนรวม (ตาม RemainingQuantity) -->
+                                        <TextBlock Grid.Column="5" 
+                                                   Text="{x:Bind Item.TotalCostDisplay}" 
+                                                   TextAlignment="Center" 
+                                                   FontSize="13"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{ThemeResource DangerBrush}"
+                                                   FontWeight="SemiBold"/>
+
+                                        <!-- NumberBox สำหรับเบิกเพิ่ม -->
+                                        <NumberBox Grid.Column="6" 
+                                                   Value="0"
+                                                   Minimum="0"
+                                                   SmallChange="0.0001"
+                                                   LargeChange="1"
+                                                   SpinButtonPlacementMode="Inline"
+                                                   Tag="{x:Bind Item.Id}"
+                                                   ValueChanged="QuantityBox_ValueChanged"
+                                                   KeyDown="QuantityBox_KeyDown"
+                                                   Loaded="QuantityBox_Loaded"
+                                                   HorizontalAlignment="Stretch"
+                                                   Margin="8,0"/>
+
+                                        <!-- ปุ่มลบ (สำหรับรายการใหม่ที่ยังไม่บันทึก) -->
+                                        <Button Grid.Column="7"
+                                                Tag="{x:Bind}"
+                                                Click="RemoveNewItemButton_Click"
+                                                Visibility="{x:Bind DeleteButtonVisibility}"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="8"
+                                                VerticalAlignment="Center"
+                                                HorizontalAlignment="Center"
+                                                ToolTipService.ToolTip="ลบรายการนี้">
+                                            <FontIcon Glyph="&#xE74D;" 
+                                                      FontSize="16" 
+                                                      Foreground="{ThemeResource DangerBrush}"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </ScrollViewer>
+            </StackPanel>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="4" 
+                        Orientation="Horizontal" 
+                        Spacing="12" 
+                        HorizontalAlignment="Right"
+                        Margin="0,20,0,0">
+                <Button Content="ยกเลิก" 
+                        Click="BackButton_Click"
+                        MinWidth="100"
+                        FontSize="14"/>
+                <Button x:Name="SaveButton"
+                        Content="บันทึกทั้งหมด"
+                        Click="SaveButton_Click"
+                        Style="{StaticResource AccentButtonStyle}"
+                        MinWidth="140"
+                        FontSize="15"/>
+            </StackPanel>
+
+            <!-- Loading Overlay -->
+            <Grid x:Name="LoadingOverlay"
+                  Grid.RowSpan="5"
+                  Background="#80000000"
+                  Visibility="Collapsed">
+                <ProgressRing IsActive="True" Width="60" Height="60"/>
+            </Grid>
+        </Grid>
+    </ScrollViewer>
+</Page>

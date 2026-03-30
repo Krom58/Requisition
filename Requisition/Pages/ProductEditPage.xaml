@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Requisition.Pages.ProductEditPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:models="using:Requisition.Models"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <!-- Header template for form fields so headers share size/color across pages -->
+        <DataTemplate x:Key="FormHeaderTemplate">
+            <TextBlock Text="{Binding}" FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}" FontWeight="SemiBold"/>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer>
+        <Grid Padding="24">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>   <!-- Header -->
+                <RowDefinition Height="Auto"/>   <!-- Form grid -->
+                <RowDefinition Height="Auto"/>   <!-- Average Price Info -->
+                <RowDefinition Height="Auto"/>   <!-- History Table -->
+                <RowDefinition Height="Auto"/>   <!-- Spacer -->
+                <RowDefinition Height="Auto"/>   <!-- Action buttons -->
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Button x:Name="BackButton"
+                           Click="BackButton_Click"
+                           Style="{StaticResource SubtleButtonStyle}">
+                        <FontIcon Glyph="&#xE72B;" FontSize="20"/>
+                    </Button>
+                    <TextBlock x:Name="TitleText"
+                               Text="เพิ่มสินค้าใหม่"
+                               FontSize="34"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                </StackPanel>
+
+                <StackPanel x:Name="ModificationInfoPanel"
+                           Visibility="Collapsed"
+                           Margin="0,12,0,0"
+                           Spacing="6">
+                    <TextBlock FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <Run Text="แก้ไขครั้งที่: "/>
+                        <Run x:Name="ModificationCountText" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                    </TextBlock>
+                    <TextBlock FontSize="14" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        <Run Text="แก้ไขล่าสุด: "/>
+                        <Run x:Name="LastModifiedDateText" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        <Run Text=" โดย "/>
+                        <Run x:Name="LastModifiedByText" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- 
+                Form: two-column responsive grid 
+            -->
+            <Grid Grid.Row="1" ColumnSpacing="16" RowSpacing="14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="1*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Row 0 -->
+                <TextBox x:Name="ProductCodeTextBox"
+                         Header="รหัสสินค้า *"
+                         HeaderTemplate="{StaticResource FormHeaderTemplate}"
+                         PlaceholderText="กรอกรหัสสินค้า"
+                         MaxLength="50"
+                         Grid.Row="0"
+                         Grid.Column="0"
+                         IsEnabled="False"
+                         FontSize="16"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                         ToolTipService.ToolTip="{Binding Text, ElementName=ProductCodeTextBox}"/>
+
+                <TextBox x:Name="ProductNameTextBox"
+                         Header="ชื่อสินค้า *"
+                         HeaderTemplate="{StaticResource FormHeaderTemplate}"
+                         PlaceholderText="กรอกชื่อสินค้า"
+                         MaxLength="200"
+                         Grid.Row="0"
+                         Grid.Column="1"
+                         IsEnabled="False"
+                         FontSize="16"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                         ToolTipService.ToolTip="{Binding Text, ElementName=ProductNameTextBox}"/>
+
+                <!-- Row 1 -->
+                <ComboBox x:Name="CategoryComboBox"
+                          Header="หมวดหมู่"
+                          HeaderTemplate="{StaticResource FormHeaderTemplate}"
+                          PlaceholderText="เลือกหรือพิมพ์หมวดหมู่"
+                          IsEditable="True"
+                          Grid.Row="1"
+                          Grid.Column="0"
+                          IsEnabled="False"
+                          FontSize="16"
+                          Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                          ToolTipService.ToolTip="{Binding SelectedItem, ElementName=CategoryComboBox}"/>
+
+                <NumberBox x:Name="PriceNumberBox"
+                           Header="ราคาปัจจุบัน (บาท)"
+                           HeaderTemplate="{StaticResource FormHeaderTemplate}"
+                           PlaceholderText="0.0000"
+                           SpinButtonPlacementMode="Inline"
+                           Minimum="0"
+                           Maximum="999999999"
+                           SmallChange="0.0001"
+                           LargeChange="1"
+                           Grid.Row="1"
+                           Grid.Column="1"
+                           FontSize="16"
+                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+
+                <!-- Row 2 -->
+                <TextBox x:Name="UnitTextBox"
+                         Header="หน่วย"
+                         HeaderTemplate="{StaticResource FormHeaderTemplate}"
+                         PlaceholderText="เช่น ชิ้น, กล่อง, แพ็ค"
+                         MaxLength="50"
+                         Grid.Row="2"
+                         Grid.Column="0"
+                         IsEnabled="False"
+                         FontSize="16"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                         ToolTipService.ToolTip="{Binding Text, ElementName=UnitTextBox}"/>
+
+                <!-- Row 3: Remarks (spanning both columns) -->
+                <TextBox x:Name="RemarksTextBox"
+                         Header="หมายเหตุ"
+                         HeaderTemplate="{StaticResource FormHeaderTemplate}"
+                         PlaceholderText="กรอกหมายเหตุหรือข้อมูลเพิ่มเติม (ถ้ามี)"
+                         MaxLength="500"
+                         TextWrapping="Wrap"
+                         AcceptsReturn="True"
+                         Height="88"
+                         Grid.Row="3"
+                         Grid.Column="0"
+                         Grid.ColumnSpan="2"
+                         FontSize="16"
+                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+
+                <!-- Accessibility: make rows explicit -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+            </Grid>
+
+            <!-- Average Price Info Card -->
+            <Border Grid.Row="2" 
+                    x:Name="AveragePricePanel"
+                    Visibility="Collapsed"
+                    Margin="0,16,0,0"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource SecondaryColorBrush}" BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="18">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="📊 สถิติราคา" 
+                               FontSize="18" 
+                               FontWeight="SemiBold"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                    
+                    <!-- แถวแรก: ราคาปัจจุบัน + ราคาเฉลี่ย -->
+                    <Grid ColumnSpacing="28">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- ราคาปัจจุบัน -->
+                        <StackPanel Grid.Column="0" Spacing="6">
+                            <TextBlock Text="ราคาปัจจุบัน" 
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" 
+                                       FontSize="13"/>
+                            <TextBlock x:Name="CurrentPriceText" 
+                                       FontSize="22" 
+                                       FontWeight="Bold"
+                                       Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                        </StackPanel>
+
+                        <!-- ราคาเฉลี่ย -->
+                        <StackPanel Grid.Column="1" Spacing="6">
+                            <TextBlock Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontSize="13">
+                                <Run Text="ราคาเฉลี่ยย้อนหลัง 12 เดือน"/>
+                            </TextBlock>
+                            <TextBlock x:Name="AveragePriceText" 
+                                       FontSize="22" 
+                                       FontWeight="Bold"
+                                       Foreground="#10893E"/>
+                        </StackPanel>
+
+                        <!-- % การเปลี่ยนแปลง -->
+                        <StackPanel Grid.Column="2" Spacing="6">
+                            <TextBlock Text="เปรียบเทียบกับเฉลี่ย 12 เดือน" 
+                                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" 
+                                       FontSize="13"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock x:Name="ChangePercentageIcon" 
+                                           FontSize="20" 
+                                           VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ChangePercentageText" 
+                                           FontSize="22" 
+                                           FontWeight="Bold"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- หมายเหตุ -->
+                    <TextBlock x:Name="AveragePriceNoteText"
+                               FontSize="12"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- History Table with Filters -->
+            <StackPanel Grid.Row="3" 
+                        x:Name="HistoryPanel"
+                        Visibility="Collapsed"
+                        Margin="0,16,0,0"
+                        Spacing="12">
+                
+                <TextBlock Text="📜 ประวัติการเปลี่ยนแปลงราคา" 
+                           FontSize="20" 
+                           FontWeight="SemiBold"
+                           Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+
+                <!-- Filters -->
+                <Grid ColumnSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="200"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" 
+                               Text="จากวันที่:" 
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                               FontSize="14"/>
+                    
+                    <CalendarDatePicker Grid.Column="1"
+                                       x:Name="StartDatePicker"
+                                       PlaceholderText="เลือกวันที่เริ่มต้น"
+                                       DateChanged="DateFilter_Changed"/>
+
+                    <TextBlock Grid.Column="2" 
+                               Text="ถึงวันที่:" 
+                               VerticalAlignment="Center"
+                               Margin="12,0,0,0"
+                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                               FontSize="14"/>
+                    
+                    <CalendarDatePicker Grid.Column="3"
+                                       x:Name="EndDatePicker"
+                                       PlaceholderText="เลือกวันที่สิ้นสุด"
+                                       DateChanged="DateFilter_Changed"/>
+
+                    <Button Grid.Column="5"
+                            Content="ล้างตัวกรอง"
+                            Click="ClearFilter_Click"
+                            Padding="12,6"/>
+                </Grid>
+
+                <!-- History DataGrid -->
+                <Border BorderBrush="{ThemeResource SecondaryColorBrush}" BorderThickness="1"
+                        CornerRadius="8"
+                        MaxHeight="400">
+                    <ScrollViewer>
+                        <ListView x:Name="HistoryListView"
+                                  SelectionMode="None">
+                            <ListView.Header>
+                                <Grid Padding="14,12" 
+                                      Background="{ThemeResource CardBackgroundFillColorDefaultBrush}" 
+                                      BorderBrush="{ThemeResource SecondaryColorBrush}" BorderThickness="0,0,0,1"
+                                      Height="52">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>          <!-- วันที่ของราคา -->
+                                        <ColumnDefinition Width="*"/>          <!-- วันที่บันทึก -->
+                                        <ColumnDefinition Width="*"/>          <!-- ราคาเก่า -->
+                                        <ColumnDefinition Width="*"/>          <!-- ราคาใหม่ -->
+                                        <ColumnDefinition Width="*"/>          <!-- การเปลี่ยนแปลง -->
+                                        <ColumnDefinition Width="*"/>          <!-- แหล่งที่มา -->
+                                        <ColumnDefinition Width="*"/>          <!-- ผู้ทำรายการ -->
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="วันที่ของราคา" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment='Center' Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="1" Text="วันที่บันทึก" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment='Center' Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="2" Text="ราคาเก่า" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment='Center' Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="3" Text="ราคาใหม่" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment='Center' Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="4" Text="การเปลี่ยนแปลง" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment='Center' Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="5" Text="แหล่งที่มา" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment='Center' Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Grid.Column="6" Text="ผู้ทำรายการ" FontWeight="SemiBold" FontSize="14" VerticalAlignment="Center" HorizontalAlignment='Center' Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                </Grid>
+                            </ListView.Header>
+
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                        </ListView>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- Pagination Controls -->
+                <Grid x:Name="PaginationPanel">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" 
+                                Orientation="Horizontal" 
+                                Spacing="8">
+                        <Button x:Name="FirstPageButton"
+                                Content="⏮️"
+                                Click="FirstPage_Click"
+                                Padding="10"
+                                IsEnabled="False"/>
+                        <Button x:Name="PreviousPageButton"
+                                Content="◀️"
+                                Click="PreviousPage_Click"
+                                Padding="10"
+                                IsEnabled="False"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="1"
+                               x:Name="PageInfoText"
+                               Text="หน้า 1 จาก 1 (แสดง 0 รายการ)"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               FontSize="14"/>
+
+                    <StackPanel Grid.Column="2" 
+                                Orientation="Horizontal" 
+                                Spacing="8">
+                        <Button x:Name="NextPageButton"
+                                Content="▶️"
+                                Click="NextPage_Click"
+                                Padding="10"
+                                IsEnabled="False"/>
+                        <Button x:Name="LastPageButton"
+                                Content="⏭️"
+                                Click="LastPage_Click"
+                                Padding="10"
+                                IsEnabled="False"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+
+            <!-- Spacer -->
+            <Border Grid.Row="4" Height="8" Background="Transparent"/>
+
+            <!-- Action Buttons -->
+            <StackPanel Grid.Row="5"
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        HorizontalAlignment="Right"
+                        Margin="0,12,0,0">
+                <Button x:Name="DeleteButton"
+                        Content="ปิดการใช้งาน"
+                        Click="DeleteButton_Click"
+                        Visibility="Collapsed"
+                        FontSize="14"
+                        Padding="12,8">
+                    <Button.Resources>
+                        <SolidColorBrush x:Key="ButtonBackground" Color="#C42B1C"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#A52314"/>
+                        <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#8B1F11"/>
+                    </Button.Resources>
+                </Button>
+
+                <Button x:Name="CancelButton"
+                        Content="ยกเลิก"
+                        Click="CancelButton_Click"
+                        FontSize="14"
+                        Padding="12,8"/>
+
+                <Button x:Name="SaveButton"
+                        Content="บันทึก"
+                        Click="SaveButton_Click"
+                        Style="{StaticResource AccentButtonStyle}"
+                        FontSize="14"
+                        Padding="12,8"/>
+            </StackPanel>
+
+            <!-- History Expander -->
+            <Expander x:Name="ProductHistoryExpander"
+                      Header="ประวัติการแก้ไขสินค้า"
+                      Visibility="Collapsed"
+                      IsExpanded="False"
+                      Grid.Row="5"
+                      Margin="0,16,0,0">
+                <ListView x:Name="ProductHistoryListView"
+                          MaxHeight="400"
+                          SelectionMode="None">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="models:ProductActionLog">
+                            <StackPanel Padding="12" Spacing="8">
+                                <!-- เวลา -->
+                                <TextBlock FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" FontSize="14">
+                                    <Run Text="{x:Bind DisplayDate, Mode=OneTime, Converter={StaticResource DateFormatConverter}}" />
+                                </TextBlock>
+
+                                <!-- ประเภทการกระทำ -->
+                                <TextBlock Text="{x:Bind ActionType}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorPrimaryBrush}" FontSize="14"/>
+
+                                <!-- รายละเอียดเพิ่มเติม -->
+                                <TextBlock Text="{x:Bind DisplayDetail}" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorTertiaryBrush}" FontSize="13"/>
+
+                                <!-- แหล่งที่มา + คนทำ -->
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                            CornerRadius="4"
+                                            Padding="10,6">
+                                        <TextBlock Text="{x:Bind Source}" 
+                                                   FontSize="12" 
+                                                   Foreground="White"
+                                                   FontWeight="SemiBold"/>
+                                    </Border>
+                                    <TextBlock Text="{x:Bind PerformedBy}" FontSize="13" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Expander>
+        </Grid>
+    </ScrollViewer>
+</Page>

@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Requisition.Pages.CostReportPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Requisition.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
+    mc:Ignorable="d">
+
+    <ScrollViewer>
+        <StackPanel Spacing="12" Padding="12">
+            <TextBlock Text="รายงานต้นทุน" FontSize="20" FontWeight="SemiBold"/>
+
+            <!-- Filters (kept from original layout) -->
+            <Grid RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Row 0 -->
+                <Grid Grid.Row="0" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="3*"/>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="1.2*"/> <!-- unit -->
+                        <ColumnDefinition Width="1.2*"/> <!-- range mode -->
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock Text="เลือกวัตถุดิบ / ค้นหาชื่อ" FontSize="12" Foreground="Gray"/>
+                        <AutoSuggestBox x:Name="ProductSearchBox"
+                PlaceholderText="พิมพ์ชื่อหรือรหัสสินค้า"
+                TextChanged="ProductSearchBox_TextChanged"
+                QuerySubmitted="ProductSearchBox_QuerySubmitted"/>
+                        <!-- Selected products shown as chips (horizontal list) -->
+                        <ItemsControl x:Name="ProductChips" Margin="0,6,0,0">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <!-- Use ItemsWrapGrid so chips wrap to next line when there isn't room -->
+                                    <ItemsWrapGrid Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#FFECECEC" CornerRadius="12" Padding="6,4" Margin="0,0,6,6">
+                                        <Grid ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions>
+                                                <!-- text column -->
+                                                <ColumnDefinition Width="*"/>
+                                                <!-- button column -->
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Allow the product text to wrap into multiple lines -->
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding}"
+                                                       TextWrapping="Wrap"
+                                                       MaxWidth="240"
+                                                       VerticalAlignment="Center"/>
+
+                                            <Button Grid.Column="1"
+                                                    Content="✕"
+                                                    Tag="{Binding}"
+                                                    Click="RemoveSelectedProduct_Click"
+                                                    Padding="4"
+                                                    VerticalAlignment="Center"
+                                                    MinWidth="0" MinHeight="0"/>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Text="หมวดหมู่" FontSize="12" Foreground="Gray"/>
+                        <AutoSuggestBox x:Name="CategorySearchBox"
+                                        PlaceholderText="ค้นหาหมวดหมู่"
+                                        TextChanged="CategorySearchBox_TextChanged"
+                                        SuggestionChosen="CategorySearchBox_SuggestionChosen"
+                                        QuerySubmitted="CategorySearchBox_QuerySubmitted"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Spacing="4">
+                        <TextBlock Text="หน่วย" FontSize="12" Foreground="Gray"/>
+                        <AutoSuggestBox x:Name="UnitSearchBox"
+                                        PlaceholderText="ค้นหาหน่วย"
+                                        TextChanged="UnitSearchBox_TextChanged"
+                                        SuggestionChosen="UnitSearchBox_SuggestionChosen"
+                                        QuerySubmitted="UnitSearchBox_QuerySubmitted"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3" Spacing="4">
+                        <TextBlock Text="โหมดช่วงเวลา" FontSize="12" Foreground="Gray"/>
+                        <ComboBox x:Name="RangeModeComboBox"
+                                  SelectionChanged="RangeModeComboBox_SelectionChanged"
+                                  SelectedIndex="0">
+                            <ComboBoxItem Content="ปี → ปี" Tag="Year"/>
+                            <ComboBoxItem Content="เดือน/ปี → เดือน/ปี" Tag="MonthYear"/>
+                            <ComboBoxItem Content="วันที่ → วันที่" Tag="Date"/>
+                        </ComboBox>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Row 1 -->
+                <Grid Grid.Row="1" ColumnSpacing="8" Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1*"/>    <!-- left: dynamic panels -->
+                        <ColumnDefinition Width="Auto"/>  <!-- right: actions only -->
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: panels (Year / MonthYear / Date) stacked in same place -->
+                    <StackPanel Grid.Column="0" Spacing="6">
+                        <!-- Year panel (visible when Year mode) -->
+                        <Grid x:Name="YearPanel" ColumnSpacing="8" Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="จาก (ปี พ.ศ.)" FontSize="12" Foreground="Gray"/>
+                                <ComboBox x:Name="FromYearComboBox" PlaceholderText="เลือกปีเริ่มต้น" SelectionChanged="FilterSelectionChanged"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Text="ถึง (ปี พ.ศ.)" FontSize="12" Foreground="Gray"/>
+                                <ComboBox x:Name="ToYearComboBox" PlaceholderText="เลือกปีสิ้นสุด" SelectionChanged="FilterSelectionChanged"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- MonthYear panel (visible when MonthYear mode) -->
+                        <Grid x:Name="MonthYearPanel" ColumnSpacing="8" Margin="0,0,0,0" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="จาก (เดือน / ปี)" FontSize="12" Foreground="Gray"/>
+                                <Grid ColumnSpacing="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="FromMonthComboBox" Grid.Column="0" PlaceholderText="เดือน" SelectionChanged="FilterSelectionChanged"/>
+                                    <ComboBox x:Name="FromMonthYearComboBox" Grid.Column="1" PlaceholderText="ปี" SelectionChanged="FilterSelectionChanged"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Text="ถึง (เดือน / ปี)" FontSize="12" Foreground="Gray"/>
+                                <Grid ColumnSpacing="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"/>
+                                        <ColumnDefinition Width="1*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="ToMonthComboBox" Grid.Column="0" PlaceholderText="เดือน" SelectionChanged="FilterSelectionChanged"/>
+                                    <ComboBox x:Name="ToMonthYearComboBox" Grid.Column="1" PlaceholderText="ปี" SelectionChanged="FilterSelectionChanged"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Date panel (visible when Date mode) -->
+                        <Grid x:Name="DatePanel" ColumnSpacing="8" Margin="0,0,0,0" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="จากวันที่" FontSize="12" Foreground="Gray"/>
+                                <!-- เปลี่ยน IsEnabled="True" เพื่อให้เลือกวันได้ -->
+                                <CalendarDatePicker x:Name="FromDatePickerFull" 
+                                                    PlaceholderText="คำนวณอัตโนมัติ (หรือเลือกเอง)" 
+                                                    IsEnabled="True"
+                                                    DateChanged="FromDatePickerFull_DateChanged"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Text="ถึงวันที่" FontSize="12" Foreground="Gray"/>
+                                <!-- แก้ไข: ใช้ event handler แยก -->
+                                <CalendarDatePicker x:Name="ToDatePickerFull" 
+                                                    PlaceholderText="เลือกวันที่" 
+                                                    DateChanged="ToDatePickerFull_DateChanged"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Right: keep empty or use for additional actions if needed -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Bottom" Spacing="8">
+                        <!-- reserved for future actions -->
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <!-- ห่อ HeaderGrid และ ReportItemsControl ด้วย ScrollViewer แนวนอน -->
+            <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <!-- Table header -->
+                    <Grid x:Name="HeaderGrid" Margin="0,8,0,0" Background="Transparent">
+                    </Grid>
+
+                    <!-- Rows: replaced with ItemsControl that we will populate with Grid rows in code-behind -->
+                    <ItemsControl x:Name="ReportItemsControl"
+                                  Margin="0,0,0,0"
+                                  Padding="0">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <ProgressRing x:Name="LoadingRing" IsActive="False" Width="40" Height="40" Visibility="Collapsed"/>
+
+            <!-- Pagination controls -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" Margin="0,8,0,0">
+                <Button x:Name="PrevPageButton" Content="ย้อนกลับ" Click="PrevPageButton_Click" Padding="12,6" IsEnabled="False"/>
+                <TextBlock x:Name="PageInfoTextBlock" VerticalAlignment="Center" Foreground="Gray" Text="หน้า 0 / 0"/>
+                <Button x:Name="NextPageButton" Content="ถัดไป" Click="NextPageButton_Click" Padding="12,6" IsEnabled="False"/>
+            </StackPanel>
+
+            <TextBlock x:Name="EmptyText" Text="ยังไม่มีข้อมูล" Visibility="Collapsed" Foreground="Gray"/>
+
+            <!-- ✅ แทนที่ LiveChartsCore ด้วย Win2D CanvasControl -->
+            <StackPanel Spacing="8" Margin="0,24,0,0">
+                <TextBlock Text="กราฟเปรียบเทียบราคา" FontSize="18" FontWeight="SemiBold"/>
+                <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="12" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                    <canvas:CanvasControl x:Name="CostChart" 
+                      Height="400"
+                      Draw="CostChart_Draw"
+                      PointerMoved="CostChart_PointerMoved"
+                      PointerExited="CostChart_PointerExited"/>
+                </Border>
+            </StackPanel>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="Requisition.Pages.TemplateEditorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Requisition.Pages"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <!-- Reuse brushes defined in App.xaml only -->
+        <Style x:Key="HeaderTextBlock" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        </Style>
+
+        <Style x:Key="SectionHeaderTextBlock" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        </Style>
+
+        <Style x:Key="BodyTextBlock" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </Style>
+
+        <Style x:Key="ListItemText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource AccentFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+        </Style>
+
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+        </Style>
+
+        <Style x:Key="InputBox" TargetType="TextBox">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+            <Setter Property="BorderBrush" Value="{ThemeResource DividerStrokeColorDefaultBrush}"/>
+            <Setter Property="Padding" Value="8,6"/>
+        </Style>
+    </Page.Resources>
+
+    <!-- Full-page ScrollViewer (TransferDetail pattern). Template name removed from visible UI.
+         Pagination controls removed; products are loaded all at once. -->
+    <ScrollViewer HorizontalAlignment="Stretch" VerticalScrollBarVisibility="Auto">
+        <Grid Padding="24" HorizontalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Header -->
+                <RowDefinition Height="Auto"/> <!-- Name + Outlet inputs (new) -->
+                <RowDefinition Height="*"/>    <!-- Main content (two-column card area) -->
+                <RowDefinition Height="Auto"/> <!-- Save / Cancel (bottom in scroll flow) -->
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="0,0,0,12">
+                <TextBlock x:Name="PageTitleText" Text="สร้าง Template ใหม่" Style="{StaticResource HeaderTextBlock}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,0">
+                    <Button x:Name="ShowHistoryButton" Content="ประวัติ" Click="ShowHistoryButton_Click" Style="{StaticResource SecondaryButton}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- New: Template name + Outlet selector -->
+            <Border Grid.Row="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="12"
+                    Margin="0,0,0,12">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <StackPanel Width="360">
+                        <TextBlock Text="ชื่อ Template" Style="{StaticResource SectionHeaderTextBlock}" Margin="0,0,0,4"/>
+                        <TextBox x:Name="TemplateNameBox" PlaceholderText="ชื่อ Template" />
+                    </StackPanel>
+
+                    <StackPanel Width="360">
+                        <!-- Mark outlet as required in the label -->
+                        <TextBlock Style="{StaticResource SectionHeaderTextBlock}" Margin="0,0,0,4">
+                            <Run Text="Outlet "/>
+                        </TextBlock>
+                        <ComboBox x:Name="OutletComboBox" PlaceholderText="เลือก Outlet" HorizontalAlignment="Stretch"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Main content: two columns (left = search + products, right = selected items) -->
+            <Grid Grid.Row="2" ColumnSpacing="12" x:Name="TwoColumnGrid" SizeChanged="RootGrid_SizeChanged">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="3*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left column: search + product list -->
+                <Border x:Name="LeftStack"
+                        Grid.Column="0"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="ค้นหา" Style="{StaticResource SectionHeaderTextBlock}"/>
+                        <TextBox x:Name="SearchBox" PlaceholderText="ค้นหาโดยรหัสหรือชื่อวัตถุดิบ" TextChanged="SearchBox_TextChanged" />
+
+                        <TextBlock x:Name="ProductsCountText" Text="รายการที่พบ: 0" Style="{StaticResource BodyTextBlock}" Margin="0,2,0,0"/>
+
+                        <!-- Show all products (no paging) -->
+                        <ListView x:Name="ProductsListView"
+                                  MaxHeight="720"
+                                  SelectionMode="None"
+                                  ItemsSource="{x:Bind ProductsPage}"
+                                  BorderBrush="{ThemeResource SecondaryColorBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="8"
+                                  ItemContainerStyle="{StaticResource ListViewItemStyle}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:Product" xmlns:models="using:Requisition.Models">
+                                    <Grid ColumnSpacing="8" Padding="8" BorderBrush="{ThemeResource SecondaryColorBrush}" BorderThickness="0,0,0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="96"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{x:Bind Code}" VerticalAlignment="Center" Margin="2,0,0,0" Style="{StaticResource ListItemText}"/>
+                                        <TextBlock Grid.Column="1" Text="{x:Bind Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{StaticResource ListItemText}"/>
+                                        <Button Grid.Column="2" x:Name="SelectButton" Content="เลือก" Click="SelectButton_Click" Tag="{x:Bind Code}" HorizontalAlignment="Right" Style="{StaticResource PrimaryButton}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+
+                <!-- Right column: selected items only -->
+                <Border x:Name="RightStack"
+                        Grid.Column="1"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="รายการที่เลือก" Style="{StaticResource SectionHeaderTextBlock}"/>
+
+                        <ListView x:Name="SelectedListView"
+                                  MaxHeight="720"
+                                  ItemsSource="{x:Bind SelectedItems}"
+                                  BorderBrush="{ThemeResource SecondaryColorBrush}"
+                                  BorderThickness="1"
+                                  CornerRadius="8"
+                                  ItemContainerStyle="{StaticResource ListViewItemStyle}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:TemplateIngredient" xmlns:models="using:Requisition.Models">
+                                    <Grid ColumnSpacing="8" Padding="8" BorderBrush="{ThemeResource SecondaryColorBrush}" BorderThickness="0,0,0,1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="96"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0" Text="{x:Bind ProductName}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Style="{StaticResource ListItemText}"/>
+                                        <Button Grid.Column="1" Content="เอาออก" Click="RemoveSelected_Click" Tag="{x:Bind ProductCode}" Style="{StaticResource SecondaryButton}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Save/Cancel at bottom inside the scroll flow -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="12" Margin="0,24,0,0">
+                <Button x:Name="SaveButton" Content="บันทึก" Width="120" Click="SaveButton_Click" Style="{StaticResource PrimaryButton}" />
+                <Button x:Name="CancelButton" Content="ยกเลิก" Width="120" Click="CancelButton_Click" Style="{StaticResource SecondaryButton}" />
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Page>
