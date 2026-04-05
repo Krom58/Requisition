@@ -214,6 +214,7 @@ namespace Requisition.Pages
         }
 
         // ✅ แก้ไข LoadMaterialReportAsync - เพิ่มต้นทุนแฝงและใช้ UsageDate
+        // NOTE: per your request, do NOT add HiddenCostPercentage to UnitCost here.
         private async Task LoadMaterialReportAsync(List<Models.Transfer> transfers, string periodType)
         {
             var groups = new List<MaterialUsageReportItem>();
@@ -222,13 +223,12 @@ namespace Requisition.Pages
             {
                 var kitchenDisplay = transfer.KitchenDisplay ?? (transfer.KitchenId.HasValue ? $"Kitchen #{transfer.KitchenId}" : "ไม่ระบุ");
 
-                // ✅ ตรวจสอบว่ามี UsageDate หรือไม่
+                // skip if no UsageDate
                 if (!transfer.UsageDate.HasValue)
-                    continue; // ข้ามถ้าไม่มีวันที่ใช้งาน
+                    continue;
 
                 foreach (var item in transfer.Items)
                 {
-                    // ✅ ใช้ UsageDate แทน CreatedDate
                     var periodKey = GetPeriodKey(transfer.UsageDate.Value, periodType);
 
                     // resolve category
@@ -238,29 +238,33 @@ namespace Requisition.Pages
                     else if (!string.IsNullOrWhiteSpace(item.ProductName) && _productCategoryByCode.TryGetValue(item.ProductName!, out var c2))
                         category = c2;
 
-                    // ✅ คำนวณต้นทุนรวม (ราคาต่อหน่วย + ต้นทุนแฝง)
+                    // unit cost: use item.UnitPrice as-is (do NOT apply transfer.HiddenCostPercentage)
                     decimal unitCost = item.UnitPrice ?? 0m;
-                    
-                    // ✅ เพิ่มต้นทุนแฝง (Hidden Cost) ถ้ามี
-                    if (transfer.HiddenCostPercentage.HasValue && transfer.HiddenCostPercentage.Value > 0)
-                    {
-                        decimal hiddenCostMultiplier = 1m + (transfer.HiddenCostPercentage.Value / 100m);
-                        unitCost = unitCost * hiddenCostMultiplier;
-                    }
 
-                    var existing = groups.FirstOrDefault(g => 
-                        g.ProductName == item.ProductName && 
-                        g.PeriodKey == periodKey && 
+                    var existing = groups.FirstOrDefault(g =>
+                        g.ProductName == item.ProductName &&
+                        g.PeriodKey == periodKey &&
                         string.Equals(g.Unit, item.Unit, StringComparison.OrdinalIgnoreCase) &&
                         string.Equals(g.KitchenDisplay, kitchenDisplay, StringComparison.OrdinalIgnoreCase));
-                    
+
+                    // item quantities from TransferItem model
+                    decimal itemIssued = item.TotalIssuedQuantity;              // Initial + Additional
+                    decimal itemAdditional = item.AdditionalQuantity;
+                    decimal itemReturned = item.ReturnedQuantity ?? 0m;
+
                     if (existing != null)
                     {
-                        // ✅ ปรับปรุง: ใช้ค่าเฉลี่ยถ่วงน้ำหนักสำหรับราคาต่อหน่วย
-                        decimal newTotalQuantity = existing.TotalQuantity + item.TotalIssuedQuantity;
-                        decimal weightedCost = ((existing.UnitCost * existing.TotalQuantity) + (unitCost * item.TotalIssuedQuantity)) / newTotalQuantity;
-                        
-                        existing.TotalQuantity = newTotalQuantity;
+                        // Weighted unit cost using issued quantities (to reflect cost of issued stock)
+                        decimal existingIssued = existing.TotalIssuedQuantity;
+                        decimal newIssuedTotal = existingIssued + itemIssued;
+
+                        decimal weightedCost = newIssuedTotal > 0
+                            ? ((existing.UnitCost * existingIssued) + (unitCost * itemIssued)) / newIssuedTotal
+                            : unitCost;
+
+                        existing.TotalIssuedQuantity = newIssuedTotal;
+                        existing.TotalAdditionalQuantity += itemAdditional;
+                        existing.TotalReturnedQuantity += itemReturned;
                         existing.UnitCost = weightedCost;
                     }
                     else
@@ -271,10 +275,12 @@ namespace Requisition.Pages
                             Unit = item.Unit ?? "",
                             PeriodKey = periodKey,
                             PeriodDisplay = GetPeriodDisplay(transfer.UsageDate!.Value, periodType),
-                            TotalQuantity = item.TotalIssuedQuantity,
+                            TotalIssuedQuantity = itemIssued,
+                            TotalAdditionalQuantity = itemAdditional,
+                            TotalReturnedQuantity = itemReturned,
                             Category = category ?? string.Empty,
                             KitchenDisplay = kitchenDisplay,
-                            UnitCost = unitCost // ✅ ใช้ราคาที่มีต้นทุนแฝงแล้ว
+                            UnitCost = unitCost
                         });
                     }
                 }
@@ -586,7 +592,8 @@ namespace Requisition.Pages
                     
                     foreach (var item in _materialItems)
                     {
-                        sb.AppendLine($"{EscapeCsv(item.ProductName)},{EscapeCsv(item.Category)},{EscapeCsv(item.KitchenDisplay)},{EscapeCsv(item.PeriodDisplay)},{item.TotalQuantity:F4},{EscapeCsv(item.Unit)},{item.UnitCost:F2},{item.TotalCost:F2}");
+                        // use 4 decimal places for unit cost and total cost for Excel precision
+                        sb.AppendLine($"{EscapeCsv(item.ProductName)},{EscapeCsv(item.Category)},{EscapeCsv(item.KitchenDisplay)},{EscapeCsv(item.PeriodDisplay)},{item.TotalQuantity:F4},{EscapeCsv(item.Unit)},{item.UnitCost:F4},{item.TotalCost:F4}");
                     }
                 }
                 else

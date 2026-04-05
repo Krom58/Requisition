@@ -8,7 +8,15 @@ namespace Requisition.Models.Reports
         public string Unit { get; set; } = string.Empty;
         public string PeriodKey { get; set; } = string.Empty;
         public string PeriodDisplay { get; set; } = string.Empty;
-        public decimal TotalQuantity { get; set; }
+
+        // Now store issued/additional/returned separately
+        public decimal TotalIssuedQuantity { get; set; }    // Initial + Additional summed
+        public decimal TotalAdditionalQuantity { get; set; }
+        public decimal TotalReturnedQuantity { get; set; }
+
+        // Net used quantity = issued - returned
+        [JsonIgnore]
+        public decimal TotalQuantity => TotalIssuedQuantity - TotalReturnedQuantity;
 
         // Category / Type
         public string Category { get; set; } = string.Empty;
@@ -16,22 +24,21 @@ namespace Requisition.Models.Reports
         // Kitchen
         public string KitchenDisplay { get; set; } = string.Empty;
 
-        // ✅ ต้นทุนต่อหน่วย
+        // ✅ ต้นทุนต่อหน่วย (weighted by issued quantity)
         public decimal UnitCost { get; set; }
 
-        // ✅ ต้นทุนรวม (คำนวณจาก TotalQuantity * UnitCost)
+        // ✅ ต้นทุนรวม (คำนวณจาก Net Quantity * UnitCost)
         [JsonIgnore]
         public decimal TotalCost => TotalQuantity * UnitCost;
 
-        // ✅ แก้ไข: เปลี่ยนจาก N4 เป็น F4 (ไม่มี comma คั่น)
+        // Display formats
+        // show net used quantity with 4 decimals (existing UI binds to this)
         [JsonIgnore]
         public string TotalQuantityDisplay => $"{TotalQuantity:F4}";
 
-        // ✅ แก้ไข: เปลี่ยนจาก N2 เป็น F2
         [JsonIgnore]
         public string UnitCostDisplay => $"{UnitCost:F4}";
 
-        // ✅ แก้ไข: เปลี่ยนจาก N2 เป็น F2
         [JsonIgnore]
         public string TotalCostDisplay => $"{TotalCost:F4}";
     }

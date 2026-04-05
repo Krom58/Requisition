@@ -1430,21 +1430,38 @@ namespace Requisition.Services
 
             return list;
         }
+        // (inside CombinedTransferService class) Replace the GetUsageByCategoryAsync method body
         public async Task<List<OutletUsageReportItem>> GetUsageByCategoryAsync(DateTime startDate, DateTime endDate, int? outletId = null)
         {
-            // NOTE: This method uses schema assumptions:
-            // - Transfer table has a link to CombinedTransfer via Transfer.CombinedTransferId (if you use a mapping table, update the JOIN)
-            // - TransferItem (or TransferItems) stores product usage per transfer with ProductCode, TotalIssuedQuantity, TotalCost
-            // - Products table has Code and Category
-            //
-            // If your schema differs (mapping table, different column names), update the SQL accordingly.
-
             var results = new List<OutletUsageReportItem>();
 
             using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync();
 
+            // Precompute per-CombinedTransfer actual-people consistency:
+            // - ConsistentActualPeople: value when every transfer in the combined group has a non-null ActualPeople and all equal.
+            // - ActualInconsistent: 1 when ActualPeople values differ across transfers in the combined group.
             var sql = @"
+WITH CombinedActual AS (
+  SELECT
+    ct.Id AS CombinedId,
+    CASE 
+      WHEN ct.CombinedCount = 3
+           AND COUNT(*) = COUNT(t2.ActualPeople)            -- no NULL ActualPeople
+           AND COUNT(DISTINCT t2.ActualPeople) = 1           -- all same actual
+      THEN MIN(t2.ActualPeople)
+      ELSE NULL
+    END AS ConsistentActualPeople,
+    CASE 
+      WHEN ct.CombinedCount = 3
+           AND COUNT(DISTINCT t2.ActualPeople) > 1
+      THEN 1 ELSE 0
+    END AS ActualInconsistent
+  FROM CombinedTransfer ct
+  JOIN Transfer t2 ON t2.CombinedTransferId = ct.Id
+  WHERE t2.UsageDate IS NOT NULL
+  GROUP BY ct.Id, ct.CombinedCount
+)
 SELECT
     CONVERT(date, t.UsageDate) AS UsageDate,
     t.OutletId,
@@ -1461,10 +1478,12 @@ SELECT
             * ISNULL(ti.UnitPrice,0)
         , 4)
     ) AS TotalCost,
-    MAX(ct.TotalPeople) AS TotalPeople,
+    MAX(ca.ConsistentActualPeople) AS ConsistentActualPeople,
+    MAX(ca.ActualInconsistent) AS ActualInconsistent,
     MAX(ct.CombinedCostPerHead) AS CombinedCostPerHead
 FROM Transfer t
-    INNER JOIN CombinedTransfer ct ON ct.Id = t.CombinedTransferId    -- ถ้าต้องการรวมเฉพาะที่มี CombinedTransfer
+    INNER JOIN CombinedTransfer ct ON ct.Id = t.CombinedTransferId
+    LEFT JOIN CombinedActual ca ON ca.CombinedId = ct.Id
     INNER JOIN TransferItems ti ON ti.TransferId = t.Id
     INNER JOIN Products p ON p.Code = ti.ProductCode
     LEFT JOIN Outlets O ON t.OutletId = O.Id
@@ -1497,8 +1516,12 @@ ORDER BY
                     Category = reader.IsDBNull(3) ? "" : reader.GetString(3),
                     TotalQuantity = reader.IsDBNull(4) ? 0m : reader.GetDecimal(4),
                     TotalCost = reader.IsDBNull(5) ? 0m : reader.GetDecimal(5),
-                    TotalPeople = reader.IsDBNull(6) ? (int?)null : reader.GetInt32(6),
-                    CombinedCostPerHead = reader.IsDBNull(7) ? (decimal?)null : reader.GetDecimal(7)
+
+                    // new fields from query:
+                    ConsistentActualPeople = reader.IsDBNull(6) ? (int?)null : reader.GetInt32(6),
+                    ActualPeopleInconsistent = !reader.IsDBNull(7) && reader.GetInt32(7) == 1,
+
+                    CombinedCostPerHead = reader.IsDBNull(8) ? (decimal?)null : reader.GetDecimal(8)
                 };
 
                 results.Add(item);

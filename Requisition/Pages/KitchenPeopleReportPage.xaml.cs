@@ -138,7 +138,14 @@ namespace Requisition.Pages
                         var expectedSum = g.Sum(t => t.ExpectedPeople);
                         var actualSum = g.Sum(t => t.ActualPeople ?? 0);
                         var transfersCount = g.Count();
-                        double percent = expectedSum > 0 ? Math.Round((double)actualSum / expectedSum * 100.0, 2) : 0.0;
+
+                        // percent = (difference / expected) * 100, rounded up to 2 decimal places (ceiling)
+                        double percent = 0.0;
+                        if (expectedSum > 0)
+                        {
+                            double raw = (double)(actualSum - expectedSum) / expectedSum * 100.0;
+                            percent = Math.Ceiling(raw * 100.0) / 100.0; // ceiling to 2 decimals
+                        }
 
                         return new KitchenPeopleReportItem
                         {
@@ -173,7 +180,14 @@ namespace Requisition.Pages
                                 var expectedSum = kg.Sum(t => t.ExpectedPeople);
                                 var actualSum = kg.Sum(t => t.ActualPeople ?? 0);
                                 var transfersCount = kg.Count();
-                                double percent = expectedSum > 0 ? Math.Round((double)actualSum / expectedSum * 100.0, 2) : 0.0;
+
+                                // percent = (difference / expected) * 100, rounded up to 2 decimal places (ceiling)
+                                double percent = 0.0;
+                                if (expectedSum > 0)
+                                {
+                                    double raw = (double)(actualSum - expectedSum) / expectedSum * 100.0;
+                                    percent = Math.Ceiling(raw * 100.0) / 100.0;
+                                }
 
                                 return new KitchenPeopleReportItem
                                 {
@@ -276,7 +290,7 @@ namespace Requisition.Pages
                 sb.AppendLine();
 
                 // Header with Date column first
-                sb.AppendLine("วันที่,ห้องครัว,จำนวนใบ,จำนวนคาดหวัง,จำนวนจริง,ส่วนต่าง,% (จริง/คาดหวัง)");
+                sb.AppendLine("วันที่,ห้องครัว,จำนวนใบ,จำนวนคาดหวัง,จำนวนจริง,ส่วนต่าง,% (ส่วนต่าง/คาดหวัง)");
 
                 // Export per-day groups whenมี _dateGroups
                 if (hasDateGroups)
@@ -290,7 +304,16 @@ namespace Requisition.Pages
                             if (kitchen.Contains(',') || kitchen.Contains('"'))
                                 kitchen = $"\"{kitchen}\"";
 
-                            sb.AppendLine($"{dateText},{kitchen},{it.TransfersCount},{it.TotalExpectedPeople},{it.TotalActualPeople},{it.Difference},{it.PercentActualOfExpected:N2}");
+                            double? p = null;
+                            if (it.TotalExpectedPeople > 0)
+                            {
+                                double raw = (double)it.Difference / it.TotalExpectedPeople * 100.0;
+                                p = Math.Ceiling(raw * 100.0) / 100.0; // ceiling to 2 decimals
+                            }
+
+                            var csvPercent = p.HasValue ? p.Value.ToString("F2") : "-";
+
+                            sb.AppendLine($"{dateText},{kitchen},{it.TransfersCount},{it.TotalExpectedPeople},{it.TotalActualPeople},{it.Difference},{csvPercent}");
                         }
                     }
                 }
@@ -303,7 +326,16 @@ namespace Requisition.Pages
                             kitchen = $"\"{kitchen}\"";
 
                         // วันที่ไม่ระบุในภาพรวม -> ใส่ '-'
-                        sb.AppendLine($"-,{kitchen},{it.TransfersCount},{it.TotalExpectedPeople},{it.TotalActualPeople},{it.Difference},{it.PercentActualOfExpected:N2}");
+                        double? p = null;
+                        if (it.TotalExpectedPeople > 0)
+                        {
+                            double raw = (double)it.Difference / it.TotalExpectedPeople * 100.0;
+                            p = Math.Ceiling(raw * 100.0) / 100.0;
+                        }
+
+                        var csvPercent = p.HasValue ? p.Value.ToString("F2") : "-";
+
+                        sb.AppendLine($"-,{kitchen},{it.TransfersCount},{it.TotalExpectedPeople},{it.TotalActualPeople},{it.Difference},{csvPercent}");
                     }
                 }
 
@@ -369,7 +401,10 @@ namespace Requisition.Pages
                                 TotalExpectedPeople = item.TotalExpectedPeople,
                                 TotalActualPeople = item.TotalActualPeople,
                                 TransfersCount = item.TransfersCount,
-                                PercentActualOfExpected = item.PercentActualOfExpected
+                                // ensure printed percent uses (difference/expected) ceiling to 2 decimals
+                                PercentActualOfExpected = item.TotalExpectedPeople > 0
+                                    ? Math.Ceiling((double)item.Difference / item.TotalExpectedPeople * 100.0 * 100.0) / 100.0
+                                    : 0.0
                             });
                         }
                     }

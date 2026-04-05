@@ -131,9 +131,26 @@ public sealed partial class OutletUsageComparisonPage : Page
 
         foreach (var grp in grouped)
         {
+            // decide group-level people display:
+            var groupRows = grp.ToList();
+
+            // If any row marks ActualPeopleInconsistent => group is inconsistent (show message)
+            bool groupActualInconsistent = groupRows.Any(r => r.ActualPeopleInconsistent);
+
+            // If any row has ConsistentActualPeople -> use that as group count (they should all be same)
+            int? groupConsistentActual = groupRows.Select(r => r.ConsistentActualPeople).Where(p => p.HasValue).Select(p => p!.Value).FirstOrDefault();
+
+            string peopleDisplay;
+            if (groupConsistentActual.HasValue && groupConsistentActual.Value > 0)
+                peopleDisplay = groupConsistentActual.Value.ToString();
+            else if (groupActualInconsistent)
+                peopleDisplay = "จำนวนคนจริง: ไม่ตรงกัน";
+            else
+                peopleDisplay = "-";
+
             var header = new TextBlock
             {
-                Text = $"วันที่ {grp.Key.Date:dd/MM/yyyy} — Outlet: {grp.Key.OutletName} (จำนวนคน: {grp.First().TotalPeople?.ToString() ?? "-"})",
+                Text = $"วันที่ {grp.Key.Date:dd/MM/yyyy} — Outlet: {grp.Key.OutletName} (จำนวนคน: {peopleDisplay})",
                 FontSize = 16,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 HorizontalAlignment = HorizontalAlignment.Center // center header
@@ -178,9 +195,9 @@ public sealed partial class OutletUsageComparisonPage : Page
             var rows = grp.ToList();
 
             // determine group-level people for cost-per-head calculation
-            int? groupTotalPeople = rows.Select(r => r.TotalPeople).Where(p => p.HasValue).Select(p => p!.Value).DefaultIfEmpty(0).FirstOrDefault();
-            // if groupTotalPeople is 0 => treat as not available
-            bool hasGroupPeople = groupTotalPeople > 0;
+            // Use ConsistentActualPeople only when available; otherwise treat as not available
+            int? groupTotalPeople = groupConsistentActual;
+            bool hasGroupPeople = groupTotalPeople.HasValue && groupTotalPeople.Value > 0;
 
             foreach (var item in rows)
             {
@@ -319,10 +336,20 @@ public sealed partial class OutletUsageComparisonPage : Page
 
             foreach (var grp in grouped)
             {
-                // group header (merged)
                 var grpKey = grp.Key;
-                var groupTotalPeople = grp.Select(r => r.TotalPeople).Where(p => p.HasValue).Select(p => p!.Value).FirstOrDefault();
-                ws.Cells[row, 1].Value = $"วันที่ {grpKey.Date:dd/MM/yyyy} — Outlet: {grpKey.OutletName} (จำนวนคน: {(groupTotalPeople > 0 ? groupTotalPeople.ToString() : "-")})";
+                // check consistent actual across group
+                var groupConsistentActual = grp.Select(r => r.ConsistentActualPeople).Where(p => p.HasValue).Select(p => p!.Value).FirstOrDefault();
+                var groupHasInconsistentActual = grp.Any(r => r.ActualPeopleInconsistent);
+
+                string peopleLabel;
+                if (groupConsistentActual > 0)
+                    peopleLabel = groupConsistentActual.ToString();
+                else if (groupHasInconsistentActual)
+                    peopleLabel = "ไม่ตรงกัน";
+                else
+                    peopleLabel = "-";
+
+                ws.Cells[row, 1].Value = $"วันที่ {grpKey.Date:dd/MM/yyyy} — Outlet: {grpKey.OutletName} (จำนวนคน: {peopleLabel})";
                 ws.Cells[row, 1, row, 6].Merge = true;
                 ws.Cells[row, 1].Style.Font.Bold = true;
                 ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -334,14 +361,17 @@ public sealed partial class OutletUsageComparisonPage : Page
                 decimal footerTotalCost = 0m;
                 decimal footerPercentSum = 0m;
 
+                // group-level people for calculations
+                int? groupTotalPeople = groupConsistentActual > 0 ? (int?)groupConsistentActual : null;
+
                 foreach (var item in rows)
                 {
                     ws.Cells[row, 1].Value = index;
                     ws.Cells[row, 2].Value = item.Category;
                     ws.Cells[row, 3].Value = item.TotalQuantity;
-                    // cost per head per row = item.TotalCost / groupTotalPeople
-                    if (groupTotalPeople > 0)
-                        ws.Cells[row, 4].Value = item.TotalCost / groupTotalPeople;
+                    // cost per head per row = item.TotalCost / groupTotalPeople (only when available)
+                    if (groupTotalPeople.HasValue && groupTotalPeople.Value > 0)
+                        ws.Cells[row, 4].Value = item.TotalCost / groupTotalPeople.Value;
                     else
                         ws.Cells[row, 4].Value = null;
 

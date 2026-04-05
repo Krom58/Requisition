@@ -92,7 +92,7 @@
                         <TextBlock Text="จำนวนคาดหวัง" Grid.Column="2" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                         <TextBlock Text="จำนวนจริง" Grid.Column="3" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                         <TextBlock Text="ส่วนต่าง" Grid.Column="4" FontWeight="SemiBold" HorizontalAlignment="Right"/>
-                        <TextBlock Text="% (จริง/คาดหวัง)" Grid.Column="5" FontWeight="SemiBold" HorizontalAlignment="Right"/>
+                        <TextBlock Text="% (ส่วนต่าง/คาดหวัง)" Grid.Column="5" FontWeight="SemiBold" HorizontalAlignment="Right"/>
                     </Grid>
 
                     <!-- Groups: each group = one date; inner ListView shows kitchens for that date -->
