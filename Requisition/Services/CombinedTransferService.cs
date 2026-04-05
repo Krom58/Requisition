@@ -1552,14 +1552,40 @@ SELECT
     CONVERT(date, t.UsageDate) AS UsageDate,
     t.OutletId,
     O.Name AS OutletName,
-    p.Name AS ProductName,   -- <- return product name
+    p.Name AS ProductName,
     p.Unit,
     SUM(ISNULL(ti.InitialQuantity,0)) AS EstimatedQuantity,
     SUM(ISNULL(ti.AdditionalQuantity,0)) AS AddedQuantity,
     SUM(ISNULL(ti.ReturnedQuantity,0)) AS ReturnedQuantity,
     SUM(ROUND(ISNULL(ti.InitialQuantity,0) * ISNULL(ti.UnitPrice,0),4)) AS EstimatedCost,
     SUM(ROUND((ISNULL(ti.InitialQuantity,0) + ISNULL(ti.AdditionalQuantity,0) - ISNULL(ti.ReturnedQuantity,0)) * ISNULL(ti.UnitPrice,0),4)) AS ActualCost,
-    MAX(ct.TotalPeople) AS TotalPeople
+    
+    -- ✅ ExpectedPeople: เช็คว่า ExpectedPeople เท่ากันหรือไม่ (ต่อ CombinedTransferId)
+    (
+        SELECT CASE 
+            WHEN COUNT(DISTINCT ISNULL(t2.ExpectedPeople, -999999)) = 1 
+                AND MAX(t2.ExpectedPeople) IS NOT NULL
+            THEN MAX(t2.ExpectedPeople)
+            ELSE NULL
+        END
+        FROM Transfer t2
+        WHERE t2.CombinedTransferId = t.CombinedTransferId
+            AND t2.CombinedTransferId IS NOT NULL
+    ) AS ExpectedPeople,
+    
+    -- ✅ ActualPeople (TotalPeople): เช็คว่า ActualPeople เท่ากันหรือไม่ (ต่อ CombinedTransferId)
+    (
+        SELECT CASE 
+            WHEN COUNT(DISTINCT ISNULL(t2.ActualPeople, -999999)) = 1 
+                AND MAX(t2.ActualPeople) IS NOT NULL
+            THEN MAX(t2.ActualPeople)
+            ELSE NULL
+        END
+        FROM Transfer t2
+        WHERE t2.CombinedTransferId = t.CombinedTransferId
+            AND t2.CombinedTransferId IS NOT NULL
+    ) AS TotalPeople
+    
 FROM Transfer t
     INNER JOIN TransferItems ti ON ti.TransferId = t.Id
     INNER JOIN Products p ON p.Code = ti.ProductCode
@@ -1572,7 +1598,9 @@ GROUP BY
     CONVERT(date, t.UsageDate),
     t.OutletId,
     O.Name,
-    p.Name, p.Unit
+    p.Name, 
+    p.Unit,
+    t.CombinedTransferId
 ORDER BY
     CONVERT(date, t.UsageDate),
     O.Name, p.Name;
@@ -1597,7 +1625,8 @@ ORDER BY
                 var returnedQty = reader.IsDBNull(7) ? 0m : reader.GetDecimal(7);
                 var estCost = reader.IsDBNull(8) ? 0m : reader.GetDecimal(8);
                 var actualCost = reader.IsDBNull(9) ? 0m : reader.GetDecimal(9);
-                var totalPeople = reader.IsDBNull(10) ? (int?)null : reader.GetInt32(10);
+                var expectedPeople = reader.IsDBNull(10) ? (int?)null : reader.GetInt32(10);
+                var totalPeople = reader.IsDBNull(11) ? (int?)null : reader.GetInt32(11);
 
                 var actualQty = estQty + addedQty - returnedQty;
 
@@ -1613,8 +1642,8 @@ ORDER BY
                     UsageDate = usageDate,
                     OutletId = outletIdDb,
                     OutletName = outletName,
-                    ProductName = productName,     // <- use ProductName
-                    Category = productName,        // keep Category in sync for compatibility
+                    ProductName = productName,
+                    Category = productName,
                     Unit = unit,
                     UnitPrice = unitPrice,
                     EstimatedQuantity = estQty,
@@ -1623,6 +1652,7 @@ ORDER BY
                     ReturnedQuantity = returnedQty,
                     ActualQuantity = actualQty,
                     ActualCost = actualCost,
+                    ExpectedPeople = expectedPeople,
                     TotalPeople = totalPeople
                 });
             }
@@ -1654,7 +1684,7 @@ ORDER BY
 
             var sql = @"
 SELECT
-    CONVERT(date, t.UsageDate) AS UsageDate,
+    CONVERT(date, t.UsageDate) AS UsageDate,  -- ✅ ใช้ UsageDate แทน CreatedDate
     t.OutletId,
     O.Name AS OutletName,
     SUM(ROUND((ISNULL(ti.InitialQuantity,0) + ISNULL(ti.AdditionalQuantity,0) - ISNULL(ti.ReturnedQuantity,0)) * ISNULL(ti.UnitPrice,0), 4)) AS TotalCost,
@@ -1671,7 +1701,7 @@ SELECT
         INNER JOIN TransferItems ti2 ON ti2.TransferId = t2.Id
         INNER JOIN Products p2 ON p2.Code = ti2.ProductCode
         WHERE t2.CombinedTransferId IS NOT NULL
-          AND CONVERT(date, t2.UsageDate) = CONVERT(date, t.UsageDate)
+          AND CONVERT(date, t2.UsageDate) = CONVERT(date, t.UsageDate)  -- ✅ ใช้ UsageDate
           AND t2.OutletId = t.OutletId
           AND (@Category IS NULL OR p2.Category = @Category)
         GROUP BY t2.CombinedTransferId
@@ -1690,17 +1720,16 @@ SELECT
         INNER JOIN TransferItems ti3 ON ti3.TransferId = t3.Id
         INNER JOIN Products p3 ON p3.Code = ti3.ProductCode
         WHERE t3.CombinedTransferId IS NOT NULL
-          AND CONVERT(date, t3.UsageDate) = CONVERT(date, t.UsageDate)
+          AND CONVERT(date, t3.UsageDate) = CONVERT(date, t.UsageDate)  -- ✅ ใช้ UsageDate
           AND t3.OutletId = t.OutletId
           AND (@Category IS NULL OR p3.Category = @Category)
         GROUP BY t3.CombinedTransferId
       ) AS per_combined2
     ) AS ActualPeople,
 
-    -- Representative hidden percent for date+outlet (renderer will check consistency across outlets)
     MAX(ISNULL(t.HiddenCostPercentage, 0)) AS HiddenCostPercentage,
 
-    -- Meat quantity: product Category/Name contains 'เนื้อ' OR 'แฮม' OR 'ไส้กรอก' (count ALL units regardless)
+    -- Meat quantity
     SUM(
       CASE
         WHEN (p.Category IS NOT NULL AND (p.Category LIKE N'%เนื้อ%' OR p.Category LIKE N'%แฮม%' OR p.Category LIKE N'%ไส้กรอก%'))
@@ -1710,7 +1739,7 @@ SELECT
       END
     ) AS MeatQty,
 
-    -- Egg quantity: product Category contains 'ไข่' (count ALL units regardless)
+    -- Egg quantity
     SUM(
       CASE
         WHEN p.Category IS NOT NULL AND p.Category LIKE N'%ไข่%'
@@ -1726,17 +1755,17 @@ FROM Transfer t
     LEFT JOIN Products p ON p.Code = ti.ProductCode
     LEFT JOIN Outlets O ON t.OutletId = O.Id
     LEFT JOIN CombinedTransfer ct ON ct.Id = t.CombinedTransferId
-WHERE t.UsageDate IS NOT NULL
-  AND YEAR(t.UsageDate) = @Year AND MONTH(t.UsageDate) = @Month
+WHERE t.UsageDate IS NOT NULL  -- ✅ ตรวจสอบ UsageDate
+  AND YEAR(t.UsageDate) = @Year AND MONTH(t.UsageDate) = @Month  -- ✅ filter ตาม UsageDate
   AND (@OutletId IS NULL OR t.OutletId = @OutletId)
 GROUP BY
-    CONVERT(date, t.UsageDate),
+    CONVERT(date, t.UsageDate),  -- ✅ GROUP BY UsageDate
     t.OutletId,
     O.Name
 ORDER BY
     CONVERT(date, t.UsageDate)";
 
-            using var cmd = new SqlCommand(sql, connection);
+    using var cmd = new SqlCommand(sql, connection);
             cmd.Parameters.AddWithValue("@Year", year);
             cmd.Parameters.AddWithValue("@Month", month);
             cmd.Parameters.AddWithValue("@OutletId", outletId.HasValue ? (object)outletId.Value : DBNull.Value);

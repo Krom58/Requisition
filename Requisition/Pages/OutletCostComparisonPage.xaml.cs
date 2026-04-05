@@ -92,9 +92,35 @@ public sealed partial class OutletCostComparisonPage : Page
 
         foreach (var grp in grouped)
         {
+            // ✅ ดึงข้อมูลจำนวนคนจาก item แรกของกลุ่ม
+            var firstItem = grp.First();
+            var expectedPeople = firstItem.ExpectedPeople;
+            var actualPeople = firstItem.TotalPeople;
+
+            // ✅ สร้าง header พร้อมข้อมูลจำนวนคน
+            var headerText = $"วันที่ {grp.Key.Date:dd/MM/yyyy} — ";
+            headerText += $"Outlet: {grp.Key.OutletName}";
+            if (expectedPeople.HasValue)
+            {
+                headerText += $" (จำนวนคนคาดการณ์: {expectedPeople:N0} คน) — ";
+            }
+            else
+            {
+                headerText += "จำนวนคนคาดการณ์: ไม่สอดคล้อง — ";
+            }
+            
+            if (actualPeople.HasValue)
+            {
+                headerText += $" (จำนวนคนมาใช้จริง: {actualPeople:N0} คน)";
+            }
+            else
+            {
+                headerText += " (จำนวนคนมาใช้จริง: ไม่สอดคล้อง)";
+            }
+
             var header = new TextBlock
             {
-                Text = $"วันที่ {grp.Key.Date:dd/MM/yyyy} — Outlet: {grp.Key.OutletName} (จำนวนคน: {grp.First().TotalPeople?.ToString() ?? "-"})",
+                Text = headerText,
                 FontSize = 16,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 HorizontalAlignment = HorizontalAlignment.Center

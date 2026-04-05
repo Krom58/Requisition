@@ -736,13 +736,13 @@
                                       BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                       BorderThickness="0,0,0,1">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="90"/>    <!-- ✅ เปลี่ยนจาก 80 → 90 -->
+                                        <ColumnDefinition Width="90"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="80"/>    <!-- ✅ เปลี่ยนจาก 70 → 80 -->
-                                        <ColumnDefinition Width="60"/>    <!-- ✅ เปลี่ยนจาก 50 → 60 -->
-                                        <ColumnDefinition Width="100"/>   <!-- ✅ เปลี่ยนจาก 80 → 100 -->
-                                        <ColumnDefinition Width="110"/>   <!-- ✅ เปลี่ยนจาก 90 → 110 -->
-                                        <ColumnDefinition x:Name="ActionColumn" Width="160" MinWidth="0"/> <!-- ✅ เปลี่ยนจาก 140 → 160 -->
+                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition x:Name="ActionColumn" Width="160" MinWidth="0"/>
                                     </Grid.ColumnDefinitions>
 
                                     <TextBlock Grid.Column="0" Text="รหัส" FontWeight="SemiBold" FontSize="14"
@@ -777,13 +777,13 @@
                                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="90"/>    <!-- ✅ เปลี่ยนจาก 80 → 90 -->
+                                                <ColumnDefinition Width="90"/>
                                                 <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="80"/>    <!-- ✅ เปลี่ยนจาก 70 → 80 -->
-                                                <ColumnDefinition Width="60"/>    <!-- ✅ เปลี่ยนจาก 50 → 60 -->
-                                                <ColumnDefinition Width="100"/>   <!-- ✅ เปลี่ยนจาก 80 → 100 -->
-                                                <ColumnDefinition Width="110"/>   <!-- ✅ เปลี่ยนจาก 90 → 110 -->
-                                                <ColumnDefinition Width="160" MinWidth="0"/> <!-- ✅ เปลี่ยนจาก 140 → 160 -->
+                                                <ColumnDefinition Width="80"/>
+                                                <ColumnDefinition Width="60"/>
+                                                <ColumnDefinition Width="100"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="160" MinWidth="0"/>
                                             </Grid.ColumnDefinitions>
 
                                             <TextBlock Grid.Column="0"
@@ -811,24 +811,14 @@
                                                            TextAlignment="Center"/>
                                             </StackPanel>
 
-                                            <NumberBox Grid.Column="2"
-x:Name="QuantityBox"
-HorizontalAlignment="Center"
-VerticalAlignment="Center"
-FontSize="14"
-FontWeight="SemiBold"
-Foreground="{ThemeResource PrimaryColorBrush}"
-MinWidth="70"
-MaxWidth="90"
-Height="36"
-SpinButtonPlacementMode="Hidden"
-SmallChange="0.01"
-LargeChange="1"
-Minimum="0"
-Loaded="QuantityBox_Loaded"
-KeyDown="QuantityBox_KeyDown"
-LostFocus="QuantityBox_LostFocus"
-IsEnabled="{Binding IsManageEditable, ElementName=RootPage}"/>
+                                            <!-- ✅ แสดงปริมาณใช้จริง (RemainingQuantity) -->
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{x:Bind RemainingQuantityDisplay}"
+                                                       VerticalAlignment="Center"
+                                                       TextAlignment="Center"
+                                                       FontSize="14"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#10B981"/>
 
                                             <TextBlock Grid.Column="3"
                                                        Text="{x:Bind Unit}"
@@ -883,6 +873,69 @@ IsEnabled="{Binding IsManageEditable, ElementName=RootPage}"/>
                                     </Border>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
+
+                            <!-- ✅ เพิ่ม Footer สำหรับแถวรวม -->
+                            <ListView.Footer>
+                                <Border Background="{ThemeResource LayerFillColorDefaultBrush}"
+                                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="0,2,0,0"
+                                        Padding="16,16">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="90"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="110"/>
+                                            <ColumnDefinition Width="160" MinWidth="0"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock Grid.Column="0"
+                                                   Grid.ColumnSpan="2"
+                                                   Text="รวมทั้งหมด"
+                                                   FontWeight="Bold"
+                                                   FontSize="16"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+
+                                        <TextBlock Grid.Column="2"
+                                                   x:Name="SummaryTotalQuantityText"
+                                                   Text="0.0000"
+                                                   FontWeight="Bold"
+                                                   FontSize="15"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   Foreground="#10B981"/>
+
+                                        <TextBlock Grid.Column="3"
+                                                   Text="-"
+                                                   FontWeight="Bold"
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   Foreground="Gray"/>
+
+                                        <TextBlock Grid.Column="4"
+                                                   Text="-"
+                                                   FontWeight="Bold"
+                                                   FontSize="14"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   Foreground="Gray"/>
+
+                                        <TextBlock Grid.Column="5"
+                                                   x:Name="SummaryTotalCostText"
+                                                   Text="฿0.0000"
+                                                   FontWeight="Bold"
+                                                   FontSize="16"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Center"
+                                                   Foreground="#DC2626"/>
+                                    </Grid>
+                                </Border>
+                            </ListView.Footer>
                         </ListView>
                     </ScrollViewer>
 

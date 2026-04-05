@@ -148,6 +148,16 @@ namespace Requisition.Models
             ? ThaiDateHelper.ToThaiDateShort(PriceDate.Value) 
             : "-";
 
+        // ✅ เพิ่มส่วนนี้
+        [JsonIgnore]
+        public string RemainingQuantityDisplay => RemainingQuantity > 0 ? $"{RemainingQuantity:N4}" : "-";
+
+        [JsonIgnore]
+        public string AdditionalQuantityDisplay => AdditionalQuantity > 0 ? $"{AdditionalQuantity:N4}" : "-";
+
+        [JsonIgnore]
+        public string ReturnedQuantityDisplay => (ReturnedQuantity ?? 0) > 0 ? $"{ReturnedQuantity:N4}" : "-";
+
         // ✅ เพิ่ม: จำนวนสุทธิ (หลังหักคืน) สำหรับการแสดงผล
         [JsonIgnore]
         public double RemainingQuantityDouble => (double)RemainingQuantity;
@@ -259,6 +269,9 @@ namespace Requisition.Models
             OnPropertyChanged(nameof(ReturnedQuantityDouble));
             OnPropertyChanged(nameof(RemainingAfterPendingReturn));
             OnPropertyChanged(nameof(RemainingAfterPendingReturnDouble));
+            OnPropertyChanged(nameof(RemainingQuantityDisplay));
+            OnPropertyChanged(nameof(AdditionalQuantityDisplay));
+            OnPropertyChanged(nameof(ReturnedQuantityDisplay));
         }
 
         private void NotifyPriceDependentProperties()

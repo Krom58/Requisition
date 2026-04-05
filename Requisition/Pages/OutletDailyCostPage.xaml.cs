@@ -198,15 +198,11 @@ namespace Requisition.Pages
             AddHeader("ปริมาณไข่ (ฟอง/ท่าน)", 7);
 
             int rows = DateTime.DaysInMonth(year, month);
+            
+            // ✅ แก้ไข: เปลี่ยนจาก sum of averages เป็น total ÷ total
             decimal totalAccumCost = 0m;
             int totalExpected = 0;
             int totalActual = 0;
-
-            // accumulators to compute SUM (and average later) of per-day rates shown in table
-            decimal sumCpeDays = 0m; // sum of cost-per-expected across displayed days
-            int countCpeDays = 0;
-            decimal sumCpaDays = 0m; // sum of cost-per-actual across displayed days
-            int countCpaDays = 0;
 
             for (int day = 1; day <= rows; day++)
             {
@@ -332,26 +328,13 @@ namespace Requisition.Pages
                     // leave day* values as zero
                 }
 
-                // accumulate totals FROM THE VALUES WE JUST DISPLAYED (ensures footer sums match the table)
+                // ✅ แก้ไข: รวมยอดรวมและจำนวนหัวรวม (ไม่ใช่เฉลี่ย)
                 totalAccumCost += dayCost;
                 totalExpected += dayExpected;
                 totalActual += dayActual;
-
-                // accumulate per-day per-person rates
-                if (dayExpected > 0)
-                {
-                    sumCpeDays += dayCost / (decimal)dayExpected;
-                    countCpeDays++;
-                }
-
-                if (dayActual > 0)
-                {
-                    sumCpaDays += dayCost / (decimal)dayActual;
-                    countCpaDays++;
-                }
             }
 
-            // footer
+            // ✅ footer: คำนวณต้นทุนต่อหัวจาก total ÷ total
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             int footerRow = rows + 1;
 
@@ -374,17 +357,17 @@ namespace Requisition.Pages
             AddFooterCell($"{totalAccumCost:F4}", 1);
             AddFooterCell(totalExpected > 0 ? totalExpected.ToString() : "-", 2);
 
-            // CPE in footer: cumulative average (sum of per-day CPE divided by number of days with CPE)
-            if (countCpeDays > 0)
-                AddFooterCell((sumCpeDays / countCpeDays).ToString("F2"), 3);
+            // ✅ แก้ไข: ต้นทุนต่อหัว (ตามสิทธิ์) = ยอดต้นทุนรวมสุทธิ ÷ จำนวนหัวรวมสุทธิ (Expected)
+            if (totalExpected > 0)
+                AddFooterCell((totalAccumCost / totalExpected).ToString("F2"), 3);
             else
                 AddFooterCell("-", 3);
 
             AddFooterCell(totalActual > 0 ? totalActual.ToString() : "-", 4);
 
-            // CPA in footer: cumulative average (sum of per-day CPA divided by number of days with CPA)
-            if (countCpaDays > 0)
-                AddFooterCell((sumCpaDays / countCpaDays).ToString("F2"), 5);
+            // ✅ แก้ไข: ต้นทุนต่อหัว (จริง) = ยอดต้นทุนรวมสุทธิ ÷ จำนวนหัวรวมสุทธิ (Actual)
+            if (totalActual > 0)
+                AddFooterCell((totalAccumCost / totalActual).ToString("F2"), 5);
             else
                 AddFooterCell("-", 5);
 
@@ -441,14 +424,10 @@ namespace Requisition.Pages
 
                 int days = DateTime.DaysInMonth(year, month);
 
-                // accumulators to build grand-total row consistent with UI
+                // ✅ แก้ไข: เก็บยอดรวมและจำนวนหัวรวม (ไม่ใช่เฉลี่ย)
                 decimal totalAccumCost = 0m;
                 int totalExpected = 0;
                 int totalActual = 0;
-                decimal sumCpeDays = 0m;
-                int countCpeDays = 0;
-                decimal sumCpaDays = 0m;
-                int countCpaDays = 0;
 
                 for (int d = 1; d <= days; d++)
                 {
@@ -481,12 +460,10 @@ namespace Requisition.Pages
                                 meatPerPerson,
                                 eggPerPerson));
 
-                            // accumulate totals from the displayed row
+                            // ✅ รวมยอด
                             totalAccumCost += adjustedCost;
                             totalExpected += it.ExpectedPeople;
                             totalActual += it.ActualPeople;
-                            if (it.ExpectedPeople > 0) { sumCpeDays += adjustedCost / it.ExpectedPeople; countCpeDays++; }
-                            if (it.ActualPeople > 0) { sumCpaDays += adjustedCost / it.ActualPeople; countCpaDays++; }
                         }
                         else
                         {
@@ -532,12 +509,10 @@ namespace Requisition.Pages
                                 meatPerPerson,
                                 eggPerPerson));
 
-                            // accumulate totals from the displayed row (use aggregated values)
+                            // ✅ รวมยอด (ใช้ aggregated values)
                             totalAccumCost += adjustedTotalCost;
                             totalExpected += dateTotalExpected;
                             totalActual += dateTotalActual;
-                            if (dateTotalExpected > 0) { sumCpeDays += adjustedTotalCost / dateTotalExpected; countCpeDays++; }
-                            if (dateTotalActual > 0) { sumCpaDays += adjustedTotalCost / dateTotalActual; countCpaDays++; }
                         }
                     }
                     else
@@ -557,9 +532,9 @@ namespace Requisition.Pages
                     }
                 }
 
-                // footer: cumulative averages for CPE/CPA and summed totals for cost/people (meat/egg left as "-")
-                string cpeFooter = countCpeDays > 0 ? (sumCpeDays / countCpeDays).ToString("F2") : "-";
-                string cpaFooter = countCpaDays > 0 ? (sumCpaDays / countCpaDays).ToString("F2") : "-";
+                // ✅ footer: ยอดรวมสุทธิ ÷ จำนวนหัวรวมสุทธิ
+                string cpeFooter = totalExpected > 0 ? (totalAccumCost / totalExpected).ToString("F2") : "-";
+                string cpaFooter = totalActual > 0 ? (totalAccumCost / totalActual).ToString("F2") : "-";
 
                 sb.AppendLine(string.Join(",",
                     EscapeCsv("รวมสุทธิ"),

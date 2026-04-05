@@ -10,14 +10,13 @@
     mc:Ignorable="d">
 
     <ScrollViewer HorizontalAlignment="Stretch">
-        <!-- ⚠️ ลบ MaxWidth และเพิ่ม Padding -->
         <Grid Padding="24,24,24,40" HorizontalAlignment="Stretch">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>   <!-- Header -->
-                <RowDefinition Height="Auto"/>   <!-- Info Cards -->
-                <RowDefinition Height="Auto"/>   <!-- Left: Available Products -->
-                <RowDefinition Height="*"/>      <!-- Right: Existing Items (expandable) -->
-                <RowDefinition Height="Auto"/>   <!-- Action Buttons -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header -->
@@ -44,10 +43,10 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/> <!-- NEW: Hidden cost + total-with-hidden row -->
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- จำนวนรายการ (row 0, col 0) -->
+                    <!-- จำนวนรายการ -->
                     <Border Grid.Column="0" Grid.Row="0"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             CornerRadius="8"
@@ -66,7 +65,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- เบิกไปแล้ว (row 0, col 1) -->
+                    <!-- เบิกไปแล้ว -->
                     <Border Grid.Column="1" Grid.Row="0"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                             CornerRadius="8"
@@ -85,7 +84,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- จำนวนคนที่คาดว่าจะเข้า (row 1, col 0) -->
+                    <!-- จำนวนคนที่คาดว่าจะเข้า -->
                     <Border x:Name="ExpectedPeopleInfoBorder"
                             Grid.Column="0" Grid.Row="1"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -108,7 +107,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- ต้นทุนต่อคน (row 1, col 1) -->
+                    <!-- ต้นทุนต่อคน -->
                     <Border x:Name="BudgetCard"
                             Grid.Column="1" Grid.Row="1"
                             CornerRadius="8"
@@ -121,7 +120,6 @@
                                        FontSize="16"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
-                            <!-- Row: cost per person and Outlet price-per-head -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
                                 <TextBlock x:Name="BudgetUsageText"
                                            FontSize="30"
@@ -139,7 +137,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- NEW: Hidden Cost Percentage Card (row 2, col 0) -->
+                    <!-- Hidden Cost Percentage Card -->
                     <Border x:Name="HiddenCostPercentageCard"
                             Grid.Column="0" Grid.Row="2"
                             Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -164,7 +162,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- NEW: Total Cost with Hidden Cost Card (row 2, col 1) -->
+                    <!-- Total Cost with Hidden Cost Card -->
                     <Border x:Name="TotalCostWithHiddenCard"
                             Grid.Column="1" Grid.Row="2"
                             CornerRadius="8"
@@ -177,7 +175,6 @@
                                        FontSize="14"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
-                            <!-- แสดงต้นทุนรวมและเป้าหมาย -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12">
                                 <TextBlock x:Name="TotalCostWithHiddenText"
                                            FontSize="28"
@@ -193,7 +190,6 @@
                                            Visibility="Collapsed"/>
                             </StackPanel>
 
-                            <!-- รายละเอียดการคำนวณ -->
                             <TextBlock x:Name="TotalCostBreakdownText"
                                        FontSize="13"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
@@ -202,7 +198,6 @@
                                        Visibility="Collapsed"
                                        Margin="0,6,0,0"/>
 
-                            <!-- Warning/Success สำหรับเทียบกับเป้าหมาย -->
                             <TextBlock x:Name="TotalCostWarningText"
                                        FontSize="14"
                                        FontWeight="SemiBold"
@@ -229,7 +224,7 @@
                 </Border>
             </StackPanel>
 
-            <!-- Left: Available Products (เพิ่มรายการใหม่) placed in Row 2 and set to stretch full width -->
+            <!-- Left: Available Products -->
             <StackPanel Grid.Row="2" Spacing="12" HorizontalAlignment="Stretch" Margin="0,0,0,24">
                 <TextBlock Text="➕ เพิ่มรายการใหม่" 
                            FontSize="22" 
@@ -248,7 +243,6 @@
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                 </Border>
 
-                <!-- Product list -->
                 <ListView x:Name="AvailableProductsListView"
                           SelectionMode="None"
                           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
@@ -303,7 +297,7 @@
                 </ListView>
             </StackPanel>
 
-            <!-- Right: Existing Items (เบิกเพิ่ม) placed in Row 3 -->
+            <!-- Right: Existing Items -->
             <StackPanel Grid.Row="3" Spacing="12">
                 <TextBlock Text="📦 รายการที่มีอยู่แล้ว (เบิกเพิ่ม)" 
                            FontSize="22" 
@@ -331,11 +325,12 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="100"/>   <!-- รหัส -->
                                     <ColumnDefinition Width="*"/>     <!-- ชื่อสินค้า -->
-                                    <ColumnDefinition Width="100"/>   <!-- เบิกสุทธิ (หลังหักคืน) -->
+                                    <ColumnDefinition Width="100"/>   <!-- เบิกสุทธิ -->
                                     <ColumnDefinition Width="80"/>    <!-- หน่วย -->
                                     <ColumnDefinition Width="110"/>   <!-- ต้นทุน/หน่วย -->
                                     <ColumnDefinition Width="120"/>   <!-- ต้นทุนรวม -->
-                                    <ColumnDefinition Width="220"/>   <!-- เบิกเพิ่มครั้งนี้ (กว้างขึ้น) -->
+                                    <ColumnDefinition Width="120"/>   <!-- 🆕 จำนวนเบิกเพิ่ม -->
+                                    <ColumnDefinition Width="120"/>   <!-- ปุ่มเบิกเพิ่ม -->
                                     <ColumnDefinition Width="50"/>    <!-- ปุ่มลบ -->
                                 </Grid.ColumnDefinitions>
 
@@ -345,12 +340,12 @@
                                 <TextBlock Grid.Column="3" Text="หน่วย" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                 <TextBlock Grid.Column="4" Text="ต้นทุน/หน่วย" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
                                 <TextBlock Grid.Column="5" Text="ต้นทุนรวม" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
-                                <TextBlock Grid.Column="6" Text="เบิกเพิ่มครั้งนี้" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                <TextBlock Grid.Column="6" Text="จำนวนเบิกเพิ่ม" FontWeight="SemiBold" FontSize="14" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Foreground="{ThemeResource AccentColorBrush}"/>
                                 <TextBlock Grid.Column="7" Text="" />
+                                <TextBlock Grid.Column="8" Text="" />
                             </Grid>
                         </ListView.Header>
 
-                        <!-- ItemTemplate -->
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="local:TransferItemDisplay">
                                 <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -364,8 +359,9 @@
                                             <ColumnDefinition Width="100"/>   
                                             <ColumnDefinition Width="80"/>    
                                             <ColumnDefinition Width="110"/>   
-                                            <ColumnDefinition Width="120"/>   
-                                            <ColumnDefinition Width="220"/>   <!-- increased -->
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="120"/>   <!-- 🆕 คอลัมน์แสดงจำนวน -->
+                                            <ColumnDefinition Width="120"/>   <!-- ปุ่มเบิกเพิ่ม -->
                                             <ColumnDefinition Width="50"/>    
                                         </Grid.ColumnDefinitions>
 
@@ -378,7 +374,7 @@
                                                    HorizontalAlignment="Center"
                                                    Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
 
-                                        <!-- ชื่อสินค้า + แสดงวันที่ของราคาที่ถูกบันทึกไว้ -->
+                                        <!-- ชื่อสินค้า -->
                                         <StackPanel Grid.Column="1" Orientation="Vertical" Margin="12,0">
                                             <TextBlock Text="{x:Bind Item.ProductName}" 
                                                        TextTrimming="CharacterEllipsis" 
@@ -396,7 +392,7 @@
                                             </TextBlock>
                                         </StackPanel>
 
-                                        <!-- ใช้อยู่ (หลังหักคืนแล้ว) -->
+                                        <!-- ใช้อยู่ -->
                                         <TextBlock Grid.Column="2" 
                                                    Text="{x:Bind Item.RemainingQuantity}" 
                                                    TextAlignment="Center" 
@@ -425,7 +421,7 @@
                                                    Foreground="{ThemeResource WarningBrush}"
                                                    FontWeight="SemiBold"/>
 
-                                        <!-- ต้นทุนรวม (ตาม RemainingQuantity) -->
+                                        <!-- ต้นทุนรวม -->
                                         <TextBlock Grid.Column="5" 
                                                    Text="{x:Bind Item.TotalCostDisplay}" 
                                                    TextAlignment="Center" 
@@ -435,22 +431,30 @@
                                                    Foreground="{ThemeResource DangerBrush}"
                                                    FontWeight="SemiBold"/>
 
-                                        <!-- NumberBox สำหรับเบิกเพิ่ม -->
-                                        <NumberBox Grid.Column="6" 
-                                                   Value="0"
-                                                   Minimum="0"
-                                                   SmallChange="0.0001"
-                                                   LargeChange="1"
-                                                   SpinButtonPlacementMode="Inline"
-                                                   Tag="{x:Bind Item.Id}"
-                                                   ValueChanged="QuantityBox_ValueChanged"
-                                                   KeyDown="QuantityBox_KeyDown"
-                                                   Loaded="QuantityBox_Loaded"
-                                                   HorizontalAlignment="Stretch"
-                                                   Margin="8,0"/>
+                                        <!-- 🆕 แสดงจำนวนที่จะเบิกเพิ่ม -->
+                                        <TextBlock Grid.Column="6"
+                                                   Text="{x:Bind AdditionalQuantityDisplay, Mode=OneWay}"
+                                                   TextAlignment="Center"
+                                                   FontSize="16"
+                                                   FontWeight="Bold"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Center"
+                                                   Foreground="{ThemeResource AccentColorBrush}"/>
 
-                                        <!-- ปุ่มลบ (สำหรับรายการใหม่ที่ยังไม่บันทึก) -->
+                                        <!-- 🆕 ปุ่มเบิกเพิ่ม -->
                                         <Button Grid.Column="7"
+                                                Content="เบิกเพิ่ม"
+                                                Tag="{x:Bind}"
+                                                Click="AddMoreQuantityButton_Click"
+                                                Style="{StaticResource AccentButtonStyle}"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                MinWidth="90"
+                                                FontSize="13"
+                                                Padding="8,6"/>
+
+                                        <!-- ปุ่มลบ -->
+                                        <Button Grid.Column="8"
                                                 Tag="{x:Bind}"
                                                 Click="RemoveNewItemButton_Click"
                                                 Visibility="{x:Bind DeleteButtonVisibility}"

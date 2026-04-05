@@ -78,7 +78,44 @@ namespace Requisition.Pages
                 _outlets = new List<Requisition.Models.Outlet>();
             }
         }
+        private void UpdateSummary()
+        {
+            if (_currentTransfer == null || _currentTransfer.Items == null)
+            {
+                if (SummaryTotalQuantityText != null)
+                    SummaryTotalQuantityText.Text = "0.0000";
+                if (SummaryTotalCostText != null)
+                    SummaryTotalCostText.Text = "฿0.0000";
+                return;
+            }
 
+            try
+            {
+                // คำนวณจำนวนรวม (ใช้ RemainingQuantityDouble - จำนวนหลังหักคืน)
+                var totalQuantity = _currentTransfer.Items.Sum(i => i.RemainingQuantityDouble);
+
+                // คำนวณต้นทุนรวม (ใช้ TotalCost ของแต่ละ item)
+                var totalCost = _currentTransfer.Items.Sum(i => i.TotalCost);
+
+                // อัปเดต UI
+                if (SummaryTotalQuantityText != null)
+                    SummaryTotalQuantityText.Text = totalQuantity.ToString("N4");
+
+                if (SummaryTotalCostText != null)
+                    SummaryTotalCostText.Text = $"฿{totalCost:N4}";
+
+                System.Diagnostics.Debug.WriteLine($"📊 Summary Updated: Qty={totalQuantity:N4}, Cost=฿{totalCost:N4}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"❌ UpdateSummary failed: {ex.Message}");
+
+                if (SummaryTotalQuantityText != null)
+                    SummaryTotalQuantityText.Text = "-";
+                if (SummaryTotalCostText != null)
+                    SummaryTotalCostText.Text = "฿-";
+            }
+        }
         // Helper wrapper in case the service call throws (keeps pattern consistent)
         private async Task<List<Requisition.Models.Outlet>> _costPer_head_safe_call_GetAllAsync()
         {
@@ -353,8 +390,8 @@ namespace Requisition.Pages
             }
             
             UpdateBudgetDisplay();
-            // Ensure hidden-cost UI updates when UI refreshes
             UpdateHiddenCostDisplay();
+            UpdateSummary(); // ✅ เพิ่มบรรทัดนี้
 
             ItemCountText.Text = _currentTransfer.ItemCount.ToString();
             TotalQuantityText.Text = _currentTransfer.TotalQuantity.ToString("N4");
@@ -547,7 +584,7 @@ namespace Requisition.Pages
 
                 if (preferOutletSnapshot)
                 {
-                    // ใช้ snapshot ที่บันทึกไว้ (ไม่เปลี่ยนแปลงตามราคาปัจจุบัน)
+                    // ใช้ snapshot ที่บันทกไว้ (ไม่เปลี่ยนแปลงตามราคาปัจจุบัน)
                     outletPricePerHead = _currentTransfer.OutletPricePerHeadAtSave;
                     outletPriceModifiedDate = _currentTransfer.OutletPricePerHeadSavedAt;
                 }
@@ -999,6 +1036,7 @@ namespace Requisition.Pages
                 MarkAsChanged();
                 UpdateUI();
                 UpdateAvailableProductsDisplay();
+                UpdateSummary();
             }
         }
 
@@ -1117,7 +1155,7 @@ namespace Requisition.Pages
                     UpdateUI();
 
                     MarkAsChanged();
-
+                    UpdateSummary();
                     await ShowSuccessDialog("สำเร็จ", "แก้ไขรายการ");
                     System.Diagnostics.Debug.WriteLine($"✅ Staged update for item ID={item.Id}");
                 }
@@ -1134,7 +1172,7 @@ namespace Requisition.Pages
                     UpdateUI();
 
                     MarkAsChanged();
-
+                    UpdateSummary();
                     await ShowSuccessDialog("สำเร็จ", "แก้ไขรายการใหม่เรียบร้อยแล้ว");
                     System.Diagnostics.Debug.WriteLine($"✅ Updated local new item ID={item.Id}");
                 }
@@ -2464,7 +2502,7 @@ namespace Requisition.Pages
                 _totalCost = CalculateTotalCost();
                 UpdateBudgetDisplay();
                 MarkAsChanged();
-
+                UpdateSummary();
                 // ✅ อัปเดต Total Quantity
                 if (ItemCountText != null)
                     ItemCountText.Text = _currentTransfer.ItemCount.ToString();
@@ -2942,5 +2980,6 @@ namespace Requisition.Pages
                 TotalActualCostWithHiddenText!.Foreground = defaultBorder;
             }
         }
+
     }
 }

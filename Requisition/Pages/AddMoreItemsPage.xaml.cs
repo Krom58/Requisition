@@ -4,13 +4,11 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Data;
 using Microsoft.UI.Xaml.Navigation;
-using Microsoft.UI.Xaml.Input;
-using Windows.System;
 using Requisition.Models;
 using Requisition.Services;
 using System.Threading.Tasks;
+using System.ComponentModel;
 
 namespace Requisition.Pages;
 
@@ -28,7 +26,6 @@ public sealed partial class AddMoreItemsPage : Page
     private ObservableCollection<TransferItemDisplay> _displayItems = new();
     private List<Outlet> _Outlets = new();
 
-    // ⚠️ เพิ่ม: fields สำหรับคำนวณต้นทุน
     private decimal _totalCost = 0;
     private int _nextTempId = -1;
 
@@ -312,11 +309,19 @@ public sealed partial class AddMoreItemsPage : Page
 
         foreach (var item in _transfer.Items)
         {
-            _displayItems.Add(new TransferItemDisplay
+            var displayItem = new TransferItemDisplay
             {
                 Item = item,
-                IsNewItem = !_originalItemIds.Contains(item.Id) // เช็คว่าเป็นรายการใหม่หรือเปล่า
-            });
+                IsNewItem = !_originalItemIds.Contains(item.Id)
+            };
+
+            // 🆕 ตั้งค่าจำนวนเบิกเพิ่มจาก Dictionary
+            if (_additionalQuantities.TryGetValue(item.Id, out var qty))
+            {
+                displayItem.AdditionalQuantity = qty;
+            }
+
+            _displayItems.Add(displayItem);
         }
 
         ItemsListView.ItemsSource = _displayItems;
@@ -384,7 +389,6 @@ public sealed partial class AddMoreItemsPage : Page
         AvailableProductsCountText.Text = $"{filtered.Count} รายการ";
     }
 
-    // ⚠️ แก้ไข: บันทึก UnitPrice และ PriceDate เหมือน TransferDetailPage
     private async void AddProductButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not Product product) return;
@@ -467,9 +471,95 @@ public sealed partial class AddMoreItemsPage : Page
         }
     }
 
-    /// <summary>
-    /// ⚠️ Method ใหม่: ลบรายการใหม่
-    /// </summary>
+    // 🆕 Event Handler สำหรับปุ่มเบิกเพิ่ม
+    private async void AddMoreQuantityButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not TransferItemDisplay display) return;
+
+        var item = display.Item;
+        var currentAdditional = _additionalQuantities.ContainsKey(item.Id) 
+            ? _additionalQuantities[item.Id] 
+            : 0m;
+
+        var qtyBox = new NumberBox
+        {
+            Header = "จำนวนที่ต้องการเบิกเพิ่ม",
+            Value = (double)currentAdditional,
+            Minimum = 0,
+            SmallChange = 0.0001,
+            LargeChange = 1,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
+            NumberFormatter = CreateDecimalFormatter()
+        };
+
+        var dialog = new ContentDialog
+        {
+            Title = $"เบิกเพิ่ม: {item.ProductName}",
+            Content = new StackPanel
+            {
+                Spacing = 12,
+                Children =
+                {
+                    new TextBlock 
+                    { 
+                        Text = $"รหัส: {item.ProductCode}", 
+                        FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Consolas"),
+                        FontSize = 14
+                    },
+                    new TextBlock 
+                    { 
+                        Text = $"ใช้อยู่: {item.RemainingQuantity:N4} {item.Unit}",
+                        FontSize = 14,
+                        Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Green)
+                    },
+                    new TextBlock 
+                    { 
+                        Text = $"💰 ต้นทุน/หน่วย: {(item.UnitPrice ?? 0):N4} ฿",
+                        FontSize = 14,
+                        Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Orange)
+                    },
+                    new Border 
+                    { 
+                        Height = 1, 
+                        Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray),
+                        Margin = new Thickness(0, 8, 0, 8)
+                    },
+                    qtyBox
+                }
+            },
+            PrimaryButtonText = "บันทึก",
+            CloseButtonText = "ยกเลิก",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = this.XamlRoot
+        };
+
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            decimal newQty = (decimal)qtyBox.Value;
+            
+            System.Diagnostics.Debug.WriteLine($"📊 AddMoreQuantity: ItemID={item.Id}, NewValue={newQty}");
+
+            if (newQty > 0)
+            {
+                _additionalQuantities[item.Id] = newQty;
+            }
+            else
+            {
+                _additionalQuantities.Remove(item.Id);
+            }
+
+            // 🆕 อัพเดท Display
+            display.AdditionalQuantity = newQty;
+
+            CalculateAndUpdateBudget();
+            UpdateHiddenCostDisplay();
+
+            await ShowSuccessInfoBar(newQty > 0 
+                ? $"ตั้งค่าเบิกเพิ่ม {item.ProductName}: {newQty:N4} {item.Unit}"
+                : $"ยกเลิกการเบิกเพิ่ม {item.ProductName}");
+        }
+    }
+
     private async void RemoveNewItemButton_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not TransferItemDisplay display) return;
@@ -486,71 +576,20 @@ public sealed partial class AddMoreItemsPage : Page
 
         if (await confirmDialog.ShowAsync() == ContentDialogResult.Primary)
         {
-            // ลบออกจาก _newItems
             _newItems.RemoveAll(i => i.Id == display.Item.Id);
 
-            // ลบออกจาก _transfer.Items
             _transfer?.Items.Remove(display.Item);
 
-            // ลบจำนวนเบิกเพิ่มที่กำหนดไว้ (ถ้ามี)
             _additionalQuantities.Remove(display.Item.Id);
 
             UpdateItemsDisplay();
             UpdateAvailableProductsList();
             UpdateNewItemsCount();
             
-            // ⚠️ เพิ่ม: คำนวณต้นทุนใหม่
             CalculateAndUpdateBudget();
         }
     }
 
-    private void QuantityBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
-    {
-        if (sender.Tag is int itemId && !double.IsNaN(args.NewValue))
-        {
-            System.Diagnostics.Debug.WriteLine($"📊 QuantityBox changed: ItemID={itemId}, Value={args.NewValue}");
-
-            _additionalQuantities[itemId] = (decimal)args.NewValue;
-
-            // ⚠️ เพิ่ม: Debug - เช็คว่า Item มีจริงใน _transfer.Items ไหม
-            var item = _transfer?.Items.FirstOrDefault(i => i.Id == itemId);
-            if (item != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"   ✅ Found item: {item.ProductCode} - {item.ProductName}");
-                System.Diagnostics.Debug.WriteLine($"   📊 IsNew: {!_originalItemIds.Contains(itemId)}");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"   ❌ Item not found in _transfer.Items!");
-                System.Diagnostics.Debug.WriteLine($"   📋 Available IDs: {string.Join(", ", _transfer?.Items.Select(i => i.Id) ?? new int[0])}");
-            }
-
-            CalculateAndUpdateBudget();
-        }
-    }
-
-    // New: handle Enter to commit and exit editing
-    private void QuantityBox_KeyDown(object sender, KeyRoutedEventArgs e)
-    {
-        if (e.Key == VirtualKey.Enter)
-        {
-            // Commit the NumberBox edit by moving focus to a known focusable control.
-            // Using a specific control avoids the FindNextElementOptions + Next/Previous conflict.
-            if (this.SaveButton != null)
-            {
-                _ = this.SaveButton.Focus(FocusState.Programmatic);
-                e.Handled = true;
-                return;
-            }
-
-            // Fallback: if SaveButton not available, try to move focus to next focusable element
-            // but avoid using FindNextElementOptions with Next/Previous (it causes ArgumentException).
-            FocusManager.TryMoveFocus(FocusNavigationDirection.Next);
-            e.Handled = true;
-        }
-    }
-
-    // SaveButton_Click ยังเหมือนเดิม - ไม่ต้องแก้ไข
     private async void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         if (_transfer == null) return;
@@ -571,7 +610,6 @@ public sealed partial class AddMoreItemsPage : Page
         {
             LoadingOverlay.Visibility = Visibility.Visible;
 
-            // ⚠️ FIX: รีโหลดข้อมูลล่าสุดจาก DB ก่อน Save
             System.Diagnostics.Debug.WriteLine($"🔄 Reloading latest data from DB...");
 
             var latestTransfer = await _transferService.GetTransferByIdAsync(_transferId);
@@ -589,7 +627,6 @@ public sealed partial class AddMoreItemsPage : Page
             int newItemsCount = 0;
             var failedItems = new List<string>();
 
-            // 1. เบิกเพิ่มรายการเดิม (เช็คว่ายังมีใน DB)
             var validExistingItems = itemsToAddMore
                 .Where(kv => _originalItemIds.Contains(kv.Key) && latestItemIds.Contains(kv.Key))
                 .ToList();
@@ -879,6 +916,7 @@ public sealed partial class AddMoreItemsPage : Page
             catch { }
         }
     }
+
     private void BackButton_Click(object sender, RoutedEventArgs e) => Frame.GoBack();
 
     private async Task ShowErrorDialog(string title, string message)
@@ -907,7 +945,6 @@ public sealed partial class AddMoreItemsPage : Page
 
     private async Task ShowSuccessInfoBar(string message)
     {
-        // แสดง Toast แทน InfoBar เพื่อความง่าย
         var dialog = new ContentDialog
         {
             Title = "✅ สำเร็จ",
@@ -918,9 +955,6 @@ public sealed partial class AddMoreItemsPage : Page
         await dialog.ShowAsync();
     }
 
-    /// <summary>
-    /// สร้าง NumberFormatter สำหรับแสดงทศนิยม 4 ตำแหน่ง
-    /// </summary>
     private Windows.Globalization.NumberFormatting.DecimalFormatter CreateDecimalFormatter()
     {
         return new Windows.Globalization.NumberFormatting.DecimalFormatter
@@ -931,25 +965,40 @@ public sealed partial class AddMoreItemsPage : Page
             IsZeroSigned = false
         };
     }
-
-    /// <summary>
-    /// ตั้งค่า NumberFormatter ให้ NumberBox เมื่อโหลดเสร็จ
-    /// </summary>
-    private void QuantityBox_Loaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is NumberBox numberBox)
-        {
-            numberBox.NumberFormatter = CreateDecimalFormatter();
-        }
-    }
 }
 
-// Moved helper wrapper to namespace scope so XAML can resolve `local:TransferItemDisplay`
-public class TransferItemDisplay
+// 🆕 เพิ่ม INotifyPropertyChanged สำหรับ Binding
+public class TransferItemDisplay : INotifyPropertyChanged
 {
     public TransferItem Item { get; set; } = null!;
-    public bool IsNewItem { get; set; } // true = รายการใหม่ (สามารถลบได้)
+    public bool IsNewItem { get; set; }
     
-    // ⚠️ เพิ่ม Property สำหรับ Binding Visibility โดยตรง
     public Visibility DeleteButtonVisibility => IsNewItem ? Visibility.Visible : Visibility.Collapsed;
+
+    private decimal _additionalQuantity;
+    public decimal AdditionalQuantity
+    {
+        get => _additionalQuantity;
+        set
+        {
+            if (_additionalQuantity != value)
+            {
+                _additionalQuantity = value;
+                OnPropertyChanged(nameof(AdditionalQuantity));
+                OnPropertyChanged(nameof(AdditionalQuantityDisplay));
+            }
+        }
+    }
+
+    public string AdditionalQuantityDisplay => 
+        AdditionalQuantity > 0 
+            ? $"+{AdditionalQuantity:N4}" 
+            : "-";
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
 }
