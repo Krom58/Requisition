@@ -317,10 +317,12 @@ public sealed partial class OutletCostComparisonPage : Page
                 ws.Cells[r, 10].Value = rows.Sum(x => x.ActualCost);
                 ws.Cells[r, 11].Value = rows.Sum(x => x.CostDifference);
                 var estSum = rows.Sum(x => x.EstimatedCost);
+                // ✅ แก้ไข: หารด้วย 100 เพื่อแปลงเป็นทศนิยม (เช่น 15% = 0.15)
                 ws.Cells[r, 12].Value = estSum != 0m ? (rows.Sum(x => x.CostDifference)) / estSum : (decimal?)null;
 
-                // formatting for footer
-                ws.Cells[r, 5, r, 12].Style.Numberformat.Format = "#,##0.0000";
+                // ✅ แก้ไข: formatting for footer - ใช้ 0.00% สำหรับคอลัมน์ที่ 12
+                ws.Cells[r, 5, r, 11].Style.Numberformat.Format = "#,##0.0000";
+                ws.Cells[r, 12].Style.Numberformat.Format = "0.00%"; // ✅ เปลี่ยนเป็น %
                 using (var rng = ws.Cells[r, 1, r, colCount]) { rng.Style.Font.Bold = true; rng.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center; }
 
                 r += 2;

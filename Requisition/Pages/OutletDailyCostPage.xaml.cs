@@ -22,6 +22,12 @@ namespace Requisition.Pages
         private Timer? _filterChangeTimer;
         private const int FilterDebounceMs = 500;
 
+        // ✅ เพิ่ม: CancellationTokenSource เพื่อยกเลิก async operation เก่า
+        private CancellationTokenSource? _refreshCts;
+
+        // ✅ เพิ่ม: SemaphoreSlim เพื่อป้องกัน ContentDialog หลายตัว
+        private readonly SemaphoreSlim _dialogSemaphore = new SemaphoreSlim(1, 1);
+
         public OutletDailyCostPage()
         {
             InitializeComponent();
@@ -99,6 +105,12 @@ namespace Requisition.Pages
 
         private async Task RefreshAsync()
         {
+            // ✅ ยกเลิก refresh operation เก่า (ถ้ามี)
+            _refreshCts?.Cancel();
+            _refreshCts?.Dispose();
+            _refreshCts = new CancellationTokenSource();
+            var token = _refreshCts.Token;
+
             try
             {
                 SetUiBusy(true);
@@ -125,20 +137,38 @@ namespace Requisition.Pages
                     return;
                 }
 
+                // ✅ ตรวจสอบ cancellation ก่อนเริ่มโหลด
+                token.ThrowIfCancellationRequested();
+
                 // category/unit removed — always pass null
                 _items = await _service.GetDailyCostsByABFAsync(year, month, outletId, null);
 
+                // ✅ ตรวจสอบ cancellation ก่อน render
+                token.ThrowIfCancellationRequested();
+
                 RenderResults(year, month);
+            }
+            catch (OperationCanceledException)
+            {
+                // ✅ ถูก cancel โดย refresh ใหม่ → ไม่ต้องแสดง error
             }
             catch (Exception ex)
             {
-                await ShowErrorAsync("โหลดข้อมูลล้มเหลว: " + ex.Message);
+                // ✅ แสดง error เฉพาะถ้ายังไม่ถูก cancel
+                if (!token.IsCancellationRequested)
+                {
+                    await ShowErrorAsync("โหลดข้อมูลล้มเหลว: " + ex.Message);
+                }
             }
             finally
             {
-                LoadingRing.IsActive = false;
-                LoadingRing.Visibility = Visibility.Collapsed;
-                SetUiBusy(false);
+                // ✅ เช็คว่าเป็น operation ล่าสุดก่อนปิด loading
+                if (!token.IsCancellationRequested)
+                {
+                    LoadingRing.IsActive = false;
+                    LoadingRing.Visibility = Visibility.Collapsed;
+                    SetUiBusy(false);
+                }
             }
         }
 
@@ -562,10 +592,30 @@ namespace Requisition.Pages
 
         private string EscapeCsv(string? s) => string.IsNullOrEmpty(s) ? "" : s.Contains(',') ? $"\"{s.Replace("\"","\"\"")}\"" : s;
 
-        private Task ShowErrorAsync(string message)
+        private async Task ShowErrorAsync(string message)
         {
-            var dlg = new ContentDialog { Title = "ข้อผิดพลาด", Content = message, CloseButtonText = "ปิด", XamlRoot = this.XamlRoot };
-            return dlg.ShowAsync().AsTask();
+            // ✅ ใช้ semaphore เพื่อป้องกันการแสดง dialog หลายตัวพร้อมกัน
+            if (!await _dialogSemaphore.WaitAsync(0))
+            {
+                // มี dialog เปิดอยู่แล้ว → ไม่แสดง
+                return;
+            }
+
+            try
+            {
+                var dlg = new ContentDialog 
+                { 
+                    Title = "ข้อผิดพลาด", 
+                    Content = message, 
+                    CloseButtonText = "ปิด", 
+                    XamlRoot = this.XamlRoot 
+                };
+                await dlg.ShowAsync();
+            }
+            finally
+            {
+                _dialogSemaphore.Release();
+            }
         }
 
         private void SetUiBusy(bool busy)

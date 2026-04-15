@@ -1729,15 +1729,23 @@ SELECT
 
     MAX(ISNULL(t.HiddenCostPercentage, 0)) AS HiddenCostPercentage,
 
-    -- Meat quantity
-    SUM(
-      CASE
-        WHEN (p.Category IS NOT NULL AND (p.Category LIKE N'%เนื้อ%' OR p.Category LIKE N'%แฮม%' OR p.Category LIKE N'%ไส้กรอก%'))
-          OR (p.Name IS NOT NULL AND (p.Name LIKE N'%แฮม%' OR p.Name LIKE N'%ไส้กรอก%' OR p.Name LIKE N'%เนื้อ%'))
-        THEN (ISNULL(ti.InitialQuantity,0) + ISNULL(ti.AdditionalQuantity,0) - ISNULL(ti.ReturnedQuantity,0))
-        ELSE 0
+    -- Meat quantity (แปลงเป็น kg)
+SUM(
+  CASE
+    WHEN (p.Category IS NOT NULL AND (p.Category LIKE N'%เนื้อ%' OR p.Category LIKE N'%แฮม%' OR p.Category LIKE N'%ไส้กรอก%'))
+      OR (p.Name IS NOT NULL AND (p.Name LIKE N'%แฮม%' OR p.Name LIKE N'%ไส้กรอก%' OR p.Name LIKE N'%เนื้อ%'))
+    THEN 
+      CASE 
+        WHEN p.Unit = N'กรัม' OR p.Unit = 'g' OR p.Unit = 'G' THEN 
+          (ISNULL(ti.InitialQuantity,0) + ISNULL(ti.AdditionalQuantity,0) - ISNULL(ti.ReturnedQuantity,0)) / 1000.0
+        WHEN p.Unit = N'กก.' OR p.Unit = 'kg' OR p.Unit = 'KG' OR p.Unit = N'กิโลกรัม' THEN 
+          (ISNULL(ti.InitialQuantity,0) + ISNULL(ti.AdditionalQuantity,0) - ISNULL(ti.ReturnedQuantity,0))
+        -- เพิ่ม conversion อื่นๆ ตามต้องการ
+        ELSE 0  -- ถ้าไม่รู้จักหน่วย ให้เป็น 0
       END
-    ) AS MeatQty,
+    ELSE 0
+  END
+) AS MeatQty,
 
     -- Egg quantity
     SUM(
